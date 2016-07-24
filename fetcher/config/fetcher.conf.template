@@ -1,0 +1,49 @@
+;----------------------------------------------------------
+; Configures the settings for ad hoc logging
+;
+;  LOGPATH              : where to put the logfile
+;  LOGFILE    	 		: filename for logfile
+;  LOGTIMEFORMAT   	 	: format for the timestamp in the log
+;  LOGFORMAT            : format for the log line
+;  LOGNAME              : name of the log
+
+[logging]
+logPath = ../logs/
+logFileName = fetcher.log
+logTimeFormat = %Y-%m-%d %H:%M:%S
+logFormat = %(asctime)s %(levelname)s %(message)s
+logName = fetcher
+;----------------------------------------------------------
+
+
+;----------------------------------------------------------
+; Configures the settings for fetching files
+;
+;  URL                  : top level url to fetch
+;  APIKEYS              : API keys to fetch
+;  LOGIN   	 	        : Login for authentication
+;  PASSWORD   	 	    : Password for authentication
+;  FILELOCATION   	 	: destination for fetched files
+
+[fetch]
+url = <url goes here>
+apiKeys = <api keys goes here>
+login = <login goes here>
+password = <password goes here>
+fileLocation = ../data/
+;----------------------------------------------------------
+
+;----------------------------------------------------------
+; Configures the destination for storage
+;
+;  STORAGE              : Either 'local' or 'S3'
+;  LOCATION   	 	    : Files system directory, or S3 bucket, depending on above
+;  AWSKEY               : AWS API key (required only if storage = S3)
+;  AWSSECRET            : AWS API secret key (required only if storage = S3)
+
+[store]
+storage = S3
+location = <bucket name here>
+awsKey = <aws key>
+awsSecret = <aws secret key>
+;----------------------------------------------------------
