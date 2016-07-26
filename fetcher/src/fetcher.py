@@ -107,8 +107,8 @@ def authGetURL(logger, url, apiKey = None, thisDate = None, requestType = None, 
             logger.info(msg)
             
     except IOError, e:
-        msg =  "   ERROR: {0} requesting file: {1}".format(e,requestURL)
-        logger.info(msg)
+        msg =  "   {0} requesting file: {1}".format(e,requestURL)
+        logger.error(msg)
         
 
 
