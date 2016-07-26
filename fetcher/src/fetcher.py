@@ -48,8 +48,6 @@ def getCmdLineParser():
 
     parser.add_argument('-e', '--endDate', default=None,
                         help='Optional. Pull data until date YYYY/MM/DD/HH ')
-
-   
     return parser
 
 
@@ -109,9 +107,11 @@ def authGetURL(logger, url, apiKey = None, thisDate = None, requestType = None, 
             logger.info(msg)
             
     except IOError, e:
-        # here we shouldn't fail if the username/password is right
-        print "It looks like the username or password is wrong: {0}".format(e)
-        sys.exit(1)
+        msg =  "   ERROR: {0} requesting file: {1}".format(e,requestURL)
+        logger.info(msg)
+        
+
+
 
 
 
