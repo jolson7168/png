@@ -9,7 +9,14 @@ An S3 bucket can be set in the configuration files, along with the AWS account's
 ## Installation
 External packages needed:
 ```
-boto		(sudo pip install boto)
+boto3		(sudo pip install boto3)
+```
+
+Don't forget you need to have your AWS credentials in ~/.aws/credentials:
+```
+[Credentials]
+aws_access_key_id = <your_access_key_here>
+aws_secret_access_key = <your_secret_key_here>
 ```
 
 ### Config Files

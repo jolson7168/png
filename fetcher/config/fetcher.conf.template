@@ -38,12 +38,8 @@ fileLocation = ../data/
 ;
 ;  STORAGE              : Either 'local' or 'S3'
 ;  LOCATION   	 	    : Files system directory, or S3 bucket, depending on above
-;  AWSKEY               : AWS API key (required only if storage = S3)
-;  AWSSECRET            : AWS API secret key (required only if storage = S3)
 
 [store]
 storage = S3
 location = <bucket name here>
-awsKey = <aws key>
-awsSecret = <aws secret key>
 ;----------------------------------------------------------
