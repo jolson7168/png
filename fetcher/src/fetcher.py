@@ -13,8 +13,8 @@ from ConfigParser import RawConfigParser
 from datetime import datetime
 from datetime import timedelta
 
-from boto.s3.connection import S3Connection
-from boto.s3.key import Key
+import boto3
+import botocore
 
 cfg = RawConfigParser()
 
@@ -92,11 +92,17 @@ def authGetURL(logger, url, apiKey = None, thisDate = None, requestType = None, 
                     outfile.close()
             else:
                 compressedFile = cStringIO.StringIO(handle.read())
-                bucket = conn.get_bucket(cfg.get('store', 'location'))
-                k = Key(bucket)
-                k.key = fname
-                k.set_contents_from_string(compressedFile.getvalue())
-                fileName = "s3://{0}/{1}".format(cfg.get('store', 'location'), fname)
+                try:
+                    conn.Object(cfg.get('store', 'location'), fname).load()
+                    msg = "   Key {0} all ready exists in bucket {1}.".format(cfg.get('store', 'location'), fname)
+                    logger.error(msg)
+                    return
+                except botocore.exceptions.ClientError as e:
+                    if e.response['Error']['Code'] == "404":
+                        conn.Bucket(cfg.get('store', 'location')).put_object(Key=fname, Body=compressedFile)
+                        fileName = "s3://{0}/{1}".format(cfg.get('store', 'location'), fname)
+                    else:
+                        raise e                               
 
             compressedFile.seek(0, os.SEEK_END)
             fileSize = compressedFile.tell()
@@ -143,13 +149,19 @@ def main(argv):
     if endDate is None:
         endDate = startDate
     if cfg.get('store', 'storage') == 'S3':
-        conn = S3Connection(cfg.get('store', 'awsKey'), cfg.get('store', 'awsSecret'))
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id = cfg.get('store', 'awsKey'),
+            aws_secret_access_key = cfg.get('store', 'awsSecret')
+        )
+        s3 = boto3.resource('s3')
+         
 
     for eachKey in apiKeys:
         currentDate = startDate
         while currentDate <= endDate:
             thisDate = currentDate.strftime('%Y/%m/%d/%H')
-            authGetURL(url = cfg.get('fetch', 'url'), apiKey = eachKey, thisDate = thisDate, logger = logger, requestType = 'main', conn = conn)
+            authGetURL(url = cfg.get('fetch', 'url'), apiKey = eachKey, thisDate = thisDate, logger = logger, requestType = 'main', conn = s3)
             currentDate = currentDate + timedelta(hours = 1)
 
 
