@@ -150,10 +150,7 @@ def main(argv):
         endDate = startDate
     if cfg.get('store', 'storage') == 'S3':
         s3_client = boto3.client(
-            's3',
-            aws_access_key_id = cfg.get('store', 'awsKey'),
-            aws_secret_access_key = cfg.get('store', 'awsSecret')
-        )
+            's3'        )
         s3 = boto3.resource('s3')
          
 
