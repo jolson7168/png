@@ -148,11 +148,13 @@ def main(argv):
     
     if endDate is None:
         endDate = startDate
+
+    s3 = None
     if cfg.get('store', 'storage') == 'S3':
         s3_client = boto3.client(
             's3'        )
         s3 = boto3.resource('s3')
-         
+
 
     for eachKey in apiKeys:
         currentDate = startDate
