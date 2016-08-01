@@ -1,0 +1,20 @@
+runners:
+  emr:
+    aws_access_key_id: <AWS access key goes here>
+    aws_secret_access_key: <AWS secret goes here>
+    aws_region: us-east-1
+    ec2_key_pair: <public rsa / pem uploaded to AWS account>
+    ec2_key_pair_file: <private rsa / pem key (local)>
+    ec2_instance_type: m1.small
+    num_ec2_instances: 5
+    s3_log_uri: <s3 location for logs>
+    s3_scratch_uri: <s3 scratch location>
+
+
+    # Less important
+    base_tmp_dir: /tmp
+    cmdenv:
+      TZ: <your time zone i.e. America/Chicago>
+
+  local:
+    base_tmp_dir: /tmp
