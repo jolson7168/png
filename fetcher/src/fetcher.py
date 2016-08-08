@@ -8,6 +8,7 @@ import StringIO
 import base64
 import json
 
+
 from urlparse import urlparse
 from ConfigParser import RawConfigParser
 from datetime import datetime
@@ -15,6 +16,7 @@ from datetime import timedelta
 
 import boto3
 import botocore
+import psycopg2
 
 cfg = RawConfigParser()
 
@@ -115,12 +117,236 @@ def authGetURL(logger, url, apiKey = None, thisDate = None, requestType = None, 
     except IOError, e:
         msg =  "   {0} requesting file: {1}".format(e,requestURL)
         logger.error(msg)
-        
 
+def executeManifest(logger, manifest, conn):
 
+    timeProc = time.time()
+    timers={}
 
+    username = cfg.get('fetch', 'login')
+    password = cfg.get('fetch', 'password')
+    base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
 
+    for item in manifest:
+        for eachURL in item['fileList']:
+            try:
+                logger.info("   Requesting {0}".format(eachURL['url']))
+                req = urllib2.Request(eachURL['url'])
+                req.add_header("Authorization", "Basic %s" % base64string)
+                eachURL['requested at'] =  datetime.strftime(datetime.utcnow(), '%Y-%m-%dT%H:%M:%S.%fZ')   
+                timeStart = time.time()
+                handle = urllib2.urlopen(req)
+                timers['request time'] = round((time.time() - timeStart),3)
+                if handle.getcode() != 200:
+                    retries = cfg.get('store', 'http_retries')
+                    current = 1
+                    sleep = 10
+                    notFixed = True
+                    statuses = []
+                    while ((current <= retries) and (notFixed)):
+                        time.sleep(sleep)
+                        handle = urllib2.urlopen(req)
+                        if handle.getcode() == 200:
+                            notFixed = False
+                        sleep = sleep + 10
+                        current = current + 1
+                        statuses.append(handle.getcode())
+                    if notFixed:                    
+                        raise IOError('timed out after {0} attempts with statuses {1}'.format(cfg.get('store', 'http_retries'), statuses))
+                    else:
+                        eachURL['retries'] = current
+                        eachURL['retry statuses'] = statuses
+               
+                eachURL['request http response'] = handle.getcode()
+                eachURL['request time'] = timers['request time']
+    
+                back = len(eachURL['url']) - eachURL['url'].rfind("/") - 1
+                fname = eachURL['url'][-1*back:]
 
+                # Write time includes verify and duplicate times
+                timeWrite = time.time()
+
+                if cfg.get('store', 'storage') == 'local':
+                    compressedFile = StringIO.StringIO(handle.read())
+                    fileName = cfg.get('store', 'location')+'/'+fname           
+                    with open(fileName, 'w') as outfile:
+                        outfile.write(compressedFile.read())
+                        outfile.close()
+                        eachURL['written at'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT%H:%M:%S.%fZ')
+                else:
+                    compressedFile = cStringIO.StringIO(handle.read())
+                    try:
+                        timeStart = time.time()
+                        conn.Object(cfg.get('store', 'location'), fname).load()
+                        timers['duplicate time'] = round((time.time() - timeStart),3)
+                        msg = "   Key {0} all ready exists in bucket {1}.".format(cfg.get('store', 'location'), fname)
+                        logger.error(msg)
+                        eachURL['status'] = 'already exists in {0}'.format(cfg.get('store', 'location'))
+                    except botocore.exceptions.ClientError as e:
+                        pass
+                        timers['duplicate time'] = round((time.time() - timeStart),3)
+                        if e.response['Error']['Code'] == "404":
+                            conn.Bucket(cfg.get('store', 'location')).put_object(Key=fname, Body=compressedFile)
+                            eachURL['written at'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT%H:%M:%S.%fZ')
+                            eachURL['status'] = 'written to S3'
+                        else:
+                            eachURL['status'] = e.response['Error']['Code']                
+                    fileName = "s3://{0}/{1}".format(cfg.get('store', 'location'), fname)                                                          
+                    eachURL['S3 destination'] = fileName
+
+                compressedFile.seek(0, os.SEEK_END)
+                fileSize = compressedFile.tell()
+                if cfg.get('store', 'verify') == 'Y' and eachURL['status'] == 'written to S3':                
+                    timeVerify = time.time()
+
+                    # readFileSize = conn.Object(cfg.get('store', 'location'),fname).content_length()
+                    # There is no exists function that uses HEAD in boto3?!?
+                    # Do not use this until we figure out how to get the file size
+                    # without actually pulling the key... 
+                    timers['verify time'] = round((time.time() - timeVerify),3)
+                    if readFileSize == fileSize:
+                        eachURL['write verified'] = 'Yes'
+                    else:
+                        eachURL['write verified'] = 'Size Mismatch'
+
+                timers['write time'] = round((time.time() - timeWrite),3)
+                eachURL['size'] = fileSize
+                eachURL['write time'] = timers['write time']
+                eachURL['duplicate time'] = timers['duplicate time']
+
+                msg = "   Wrote {0} from {1}. Size: {2} Timers: {3}".format(fileName, eachURL['url'], fileSize, timers)
+                logger.info(msg)            
+            
+
+            except IOError, e:
+                msg =  "   {0} requesting file: {1}".format(e,eachURL['url'])
+                logger.error(msg)
+                eachURL['status'] = msg
+                pass
+
+    return manifest
+
+def getFileList(logger, url, apiKey = None, thisDate = None):
+    timeProc = time.time()
+    timers={}
+
+    results = {}
+    if thisDate and apiKey:
+        requestURL = '{0}/{1}/{2}'.format(url, apiKey, thisDate)
+    else:
+        requestURL = url
+
+    logger.info("   Requesting {0}".format(requestURL))
+    username = cfg.get('fetch', 'login')
+    password = cfg.get('fetch', 'password')
+
+    req = urllib2.Request(requestURL)
+
+    base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
+    authheader =  "Basic %s" % base64string
+    req.add_header("Authorization", authheader)
+    results['requestURL'] = requestURL
+    results['api'] = apiKey
+    results['date'] = thisDate
+    results['fileList']=[]
+    try:
+        x = 0
+        timeStart = time.time()
+        handle = urllib2.urlopen(req)
+        requestTime = round((time.time() - timeStart),3)
+        for line in handle:
+            x = x + 1
+            if "<a href=" in line:
+                quote1 = line.find('"')
+                quote2 = line.find('"', quote1+1)
+                results['fileList'].append({'url':line[quote1+1:quote2]})
+    except IOError, e:
+        requestTime = round((time.time() - timeStart),3)
+        thisResult = {'line':x, 'error':'True', 'message':e}        
+        results['fileList'].append(thisResult)
+        pass
+    results['executionTime'] = round((time.time() - timeProc),3)
+    results['httpStatus'] = handle.getcode()
+    msg = "   Finished {0} ".format(requestURL)
+    logger.info(msg)
+    return results
+
+def manifestToDb(results):
+    writeList = []
+    for item1 in results:
+        if "fileList" in item1:
+            for item in item1["fileList"]:            
+                if 'url' in item:
+                    url = item['url']
+                    #2016080704
+                    datadate = item['url'].split('_')[3]
+                    fixedDataDate = datetime.strptime(datadate, "%Y%m%d%H")
+                    datadateWrite = datetime.strftime(fixedDataDate, "%Y-%m-%d %H:%M:%S")
+                    apikey = item['url'].split('_')[2]
+                    key1 =item['url'].split('_')[4].split('.')[0]
+                    key2 = item['url'].split('_')[4].split('.')[1]
+                    key3 = item['url'].split('_')[4].split('.')[2]
+                    key4 = item['url'].split('_')[4].split('.')[3]
+                    if 'status' in item:
+                        status = item['status']
+                    else:
+                        status = None 
+                    if 'duplicate time' in item:
+                        duplicateTime = item['duplicate time']
+                    else:
+                        duplicateTime = None
+                    # "2016-08-07T17:29:21.274678Z" 
+                    if 'requested at' in item:
+                        requestedAt = item['requested at']
+                        requestedAtS = datetime.strptime(requestedAt, "%Y-%m-%dT%H:%M:%S.%fZ")
+                        requestedAtWrite = datetime.strftime(requestedAtS, "%Y-%m-%d %H:%M:%S")
+                    else:
+                        requestedAt = None
+                    if 'S3 destination' in item:
+                        S3Destination = item['S3 destination']
+                    else:
+                        S3Destination = None
+                    if 'written at' in item:  
+                        writtenAt = item['written at']
+                        writtenAtS = datetime.strptime(writtenAt, "%Y-%m-%dT%H:%M:%S.%fZ")
+                        writtenAtWrite = datetime.strftime(writtenAtS, "%Y-%m-%d %H:%M:%S")
+                    else:
+                        writtenAt = None
+                    if 'request time' in item:
+                        requestTime = item['request time']
+                    else:
+                        requestTime = None
+                    if 'request http response' in item:
+                        requestResponse = item['request http response']
+                    else:   
+                        requestResponse = None
+                    if 'write time' in item:
+                        writeTime = item['write time']
+                    else:
+                        writeTime = None
+                    if 'write verified' in item:
+                        writeVerified = item['writeVerified']
+                    else:
+                        writeVerified = None
+                    if 'size' in item:
+                        size = item['size']
+                    else:
+                        size = None
+
+                    t1 = (datadateWrite,url,apikey,key1,key2,key3,key4,requestedAtWrite,requestTime,size,requestResponse,S3Destination, duplicateTime, writtenAtWrite, writeTime, writeVerified, status,)
+                    writeList.append(t1)
+
+    conn_string = "dbname='{0}' port='{1}' user='{2}' password='{3}' host='{4}'".format(cfg.get('database', 'name'), cfg.get('database', 'port'), cfg.get('database', 'user'), cfg.get('database', 'password'), cfg.get('database', 'host'))
+    conn = psycopg2.connect(conn_string)
+    cur = conn.cursor()
+
+    args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", x) for x in writeList)
+    sql = "INSERT INTO fetchstats VALUES " + args_str
+    cur.execute("INSERT INTO fetchstats VALUES " + args_str) 
+    conn.commit()
+    cur.close()                
+    conn.close()
+    return True
 
 def main(argv):
 
@@ -155,13 +381,23 @@ def main(argv):
             's3'        )
         s3 = boto3.resource('s3')
 
-
+    manifest = []
     for eachKey in apiKeys:
         currentDate = startDate
         while currentDate <= endDate:
             thisDate = currentDate.strftime('%Y/%m/%d/%H')
-            authGetURL(url = cfg.get('fetch', 'url'), apiKey = eachKey, thisDate = thisDate, logger = logger, requestType = 'main', conn = s3)
+            results = getFileList(logger, url = cfg.get('fetch', 'url'), apiKey = eachKey, thisDate = thisDate)
+            manifest.append(results)
             currentDate = currentDate + timedelta(hours = 1)
+
+    results = executeManifest(logger, manifest, s3)
+
+    results = manifestToDb(results)
+
+    thefile = open('/tmp/test2.txt', 'w')
+    for item in manifest:
+      thefile.write("%s\n" % json.dumps(item))
+    thefile.close()
 
 
     # Clean up

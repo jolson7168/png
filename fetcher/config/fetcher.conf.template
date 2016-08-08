@@ -31,6 +31,7 @@ apiKeys = <api keys goes here>
 login = <login goes here>
 password = <password goes here>
 fileLocation = ../data/
+retries = 5
 ;----------------------------------------------------------
 
 ;----------------------------------------------------------
@@ -38,8 +39,29 @@ fileLocation = ../data/
 ;
 ;  STORAGE              : Either 'local' or 'S3'
 ;  LOCATION   	 	    : Files system directory, or S3 bucket, depending on above
+;  VERIFY               : Verify file was written to S3 by doing a read after the write
+;  AWSKEY               : sourced from os
+;  AWSSECRET            : sourced from os
 
 [store]
 storage = S3
 location = <bucket name here>
+verify = N
+;----------------------------------------------------------
+
+;----------------------------------------------------------
+; Configures the destination for metrics
+;
+;  NAME                 : Database name
+;  PORT        	 	    : Port
+;  USER                 : User
+;  PASSWORD             : Password
+;  HOST                 : URL to host
+
+[database]
+name = <name here>
+port = <port here>
+user = <user here>
+password = <password here>
+host = <host name here>
 ;----------------------------------------------------------
