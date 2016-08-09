@@ -356,7 +356,7 @@ def main(argv):
 
     cfg.read(args.config_file)
 
-    startDate =  datetime.strptime(args.startDate, "%Y/%m/%d/%H") + timedelta(int(cfg.get('store', 'tzoffset')))
+    startDate =  datetime.strptime(args.startDate, "%Y/%m/%d/%H") + timedelta(hours = int(cfg.get('store', 'tzoffset')))
     if args.endDate:  
         endDate = datetime.strptime(args.endDate, "%Y/%m/%d/%H")
     else:
