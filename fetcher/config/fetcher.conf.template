@@ -54,12 +54,14 @@ verify = N
 ;
 ;  NAME                 : Database name
 ;  PORT        	 	    : Port
+;  TABLE                : Table name
 ;  USER                 : User
 ;  PASSWORD             : Password
 ;  HOST                 : URL to host
 
 [database]
 name = <name here>
+table = <table here>
 port = <port here>
 user = <user here>
 password = <password here>

@@ -311,7 +311,7 @@ def manifestToDb(results):
                         writtenAtS = datetime.strptime(writtenAt, "%Y-%m-%dT%H:%M:%S.%fZ")
                         writtenAtWrite = datetime.strftime(writtenAtS, "%Y-%m-%d %H:%M:%S")
                     else:
-                        writtenAt = None
+                        writtenAtWrite = None
                     if 'request time' in item:
                         requestTime = item['request time']
                     else:
@@ -341,8 +341,8 @@ def manifestToDb(results):
     cur = conn.cursor()
 
     args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", x) for x in writeList)
-    sql = "INSERT INTO fetchstats VALUES " + args_str
-    cur.execute("INSERT INTO fetchstats VALUES " + args_str) 
+    sql = "INSERT INTO {0} VALUES ".format(cfg.get('database', 'table')) + args_str
+    cur.execute("INSERT INTO {0} VALUES ".format(cfg.get('database', 'table')) + args_str) 
     conn.commit()
     cur.close()                
     conn.close()
