@@ -212,7 +212,8 @@ def executeManifest(logger, manifest, conn):
                 timers['write time'] = round((time.time() - timeWrite),3)
                 eachURL['size'] = fileSize
                 eachURL['write time'] = timers['write time']
-                eachURL['duplicate time'] = timers['duplicate time']
+                if 'duplicate time' in timers:
+                    eachURL['duplicate time'] = timers['duplicate time']
 
                 msg = "   Wrote {0} from {1}. Size: {2} Timers: {3}".format(fileName, eachURL['url'], fileSize, timers)
                 logger.info(msg)            
@@ -356,16 +357,16 @@ def main(argv):
 
     cfg.read(args.config_file)
 
-    if cfg.has_option('fetch','startoffset'):
-        startOffset = int(cfg.get('fetch','startoffset'))
-    else:
-        startOffset = -1
-
-    startDate =  args.startDate + timedelta(hours = startOffset)
     if args.endDate:  
         endDate = datetime.strptime(args.endDate, "%Y/%m/%d/%H")
+        startDate =  datetime.strptime(args.startDate, "%Y/%m/%d/%H")
     else:
-        endDate = args.startDate + timedelta(hours = -1)
+        if cfg.has_option('fetch','startoffset'):
+            startOffset = int(cfg.get('fetch','startoffset'))
+        else:
+            startOffset = -1
+        startDate =  (args.startDate + timedelta(hours = startOffset)).replace(minute=0, second=0, microsecond=0)
+        endDate = (args.startDate + timedelta(hours = -1)).replace(minute=0, second=0, microsecond=0)
 
     apiKeys = cfg.get('fetch', 'apiKeys').split(',')
     # Get the logger going
@@ -384,19 +385,18 @@ def main(argv):
             's3'        )
         s3 = boto3.resource('s3')
 
-    manifest = []
-    for eachKey in apiKeys:
-        currentDate = startDate
-        while currentDate <= endDate:
-            thisDate = currentDate.strftime('%Y/%m/%d/%H')
+    currentDate = startDate
+    while currentDate <= endDate:
+        thisDate = currentDate.strftime('%Y/%m/%d/%H')
+        results = []
+        manifest = []
+        for eachKey in apiKeys:
             results = getFileList(logger, url = cfg.get('fetch', 'url'), apiKey = eachKey, thisDate = thisDate)
             manifest.append(results)
-            currentDate = currentDate + timedelta(hours = 1)
-
-    results = executeManifest(logger, manifest, s3)
-
-    results = manifestToDb(results)
-
+        fetchFilesResults = executeManifest(logger, manifest, s3)
+        if cfg.get('database', 'archiveResults') == 'Y':
+            final = manifestToDb(fetchFileResults)
+        currentDate = currentDate + timedelta(hours = 1)
 
     # Clean up
     logger.info('Done! '+time.strftime("%Y%m%d%H%M%S")+'  ==============================')

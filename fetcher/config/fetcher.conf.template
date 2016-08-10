@@ -54,6 +54,7 @@ verify = N
 ;----------------------------------------------------------
 ; Configures the destination for metrics
 ;
+;  ARCHIVERESULTS       : Archive the results of the fetch? Y,N
 ;  NAME                 : Database name
 ;  PORT        	 	    : Port
 ;  TABLE                : Table name
@@ -62,6 +63,7 @@ verify = N
 ;  HOST                 : URL to host
 
 [database]
+archiveResults = Y
 name = <name here>
 table = <table here>
 port = <port here>
