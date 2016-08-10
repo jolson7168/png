@@ -24,7 +24,7 @@ logName = fetcher
 ;  LOGIN   	 	        : Login for authentication
 ;  PASSWORD   	 	    : Password for authentication
 ;  FILELOCATION   	 	: destination for fetched files
-;  TZOFFSET             : time zone offset (for real time)
+;  STARTOFFSET          : Default starting offset (hours)
 
 [fetch]
 url = <url goes here>
@@ -33,7 +33,7 @@ login = <login goes here>
 password = <password goes here>
 fileLocation = ../data/
 retries = 5
-tzoffset = -5
+startoffset = -24
 ;----------------------------------------------------------
 
 ;----------------------------------------------------------

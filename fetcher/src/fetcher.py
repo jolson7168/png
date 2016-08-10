@@ -45,7 +45,7 @@ def getCmdLineParser():
     parser.add_argument('-c', '--config_file', default='../config/fetcher.conf',
                         help='configuration file name (*.ini format)')
 
-    parser.add_argument('-s', '--startDate', default=(datetime.now() + timedelta(hours = -1)) .strftime("%Y/%m/%d/%H"),
+    parser.add_argument('-s', '--startDate', default = datetime.now(),
                         help='start pulling data from date YYYY/MM/DD/HH. Default: last hour')
 
     parser.add_argument('-e', '--endDate', default=None,
@@ -356,11 +356,16 @@ def main(argv):
 
     cfg.read(args.config_file)
 
-    startDate =  datetime.strptime(args.startDate, "%Y/%m/%d/%H") + timedelta(hours = int(cfg.get('store', 'tzoffset')))
+    if cfg.has_option('fetch','startoffset'):
+        startOffset = int(cfg.get('fetch','startoffset'))
+    else:
+        startOffset = -1
+
+    startDate =  args.startDate + timedelta(hours = startOffset)
     if args.endDate:  
         endDate = datetime.strptime(args.endDate, "%Y/%m/%d/%H")
     else:
-        endDate = None
+        endDate = args.startDate + timedelta(hours = -1)
 
     apiKeys = cfg.get('fetch', 'apiKeys').split(',')
     # Get the logger going
@@ -372,8 +377,6 @@ def main(argv):
         msg = "Running {0}....".format(startDate.strftime('%Y/%m/%d %H:00'))
     logger.info(msg)
     
-    if endDate is None:
-        endDate = startDate
 
     s3 = None
     if cfg.get('store', 'storage') == 'S3':
@@ -393,11 +396,6 @@ def main(argv):
     results = executeManifest(logger, manifest, s3)
 
     results = manifestToDb(results)
-
-    thefile = open('/tmp/test2.txt', 'w')
-    for item in manifest:
-      thefile.write("%s\n" % json.dumps(item))
-    thefile.close()
 
 
     # Clean up
