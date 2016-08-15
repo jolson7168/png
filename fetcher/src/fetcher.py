@@ -396,7 +396,7 @@ def main(argv):
             manifest.append(results)
         fetchFilesResults = executeManifest(logger, manifest, s3)
         if cfg.get('database', 'archiveResults') == 'Y':
-            final = manifestToDb(fetchFileResults)
+            final = manifestToDb(fetchFilesResults)
         currentDate = currentDate + timedelta(hours = 1)
 
     # Clean up
