@@ -126,7 +126,7 @@ def executeManifest(logger, manifest, conn):
     username = cfg.get('fetch', 'login')
     password = cfg.get('fetch', 'password')
     base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
-
+    logger.info("Size of manifest: {0}".format(len(manifest)))
     for item in manifest:
         for eachURL in item['fileList']:
             try:
@@ -388,6 +388,7 @@ def main(argv):
     currentDate = startDate
     while currentDate <= endDate:
         thisDate = currentDate.strftime('%Y/%m/%d/%H')
+        logger.info("Fetching day: {0}".format(thisDate))
         results = []
         manifest = []
         for eachKey in apiKeys:
