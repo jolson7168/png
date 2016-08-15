@@ -165,7 +165,7 @@ def executeManifest(logger, manifest, conn):
 
                 # Write time includes verify and duplicate times
                 timeWrite = time.time()
-
+                written = False
                 if cfg.get('store', 'storage') == 'local':
                     compressedFile = StringIO.StringIO(handle.read())
                     fileName = cfg.get('store', 'location')+'/'+fname           
@@ -173,13 +173,14 @@ def executeManifest(logger, manifest, conn):
                         outfile.write(compressedFile.read())
                         outfile.close()
                         eachURL['written at'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT%H:%M:%S.%fZ')
+                        written = True
                 else:
                     compressedFile = cStringIO.StringIO(handle.read())
                     try:
                         timeStart = time.time()
                         conn.Object(cfg.get('store', 'location'), fname).load()
                         timers['duplicate time'] = round((time.time() - timeStart),3)
-                        msg = "   Key {0} all ready exists in bucket {1}.".format(cfg.get('store', 'location'), fname)
+                        msg = "   Key {0} all ready exists in bucket {1}.".format(fname, cfg.get('store', 'location'))
                         logger.error(msg)
                         eachURL['status'] = 'already exists in {0}'.format(cfg.get('store', 'location'))
                     except botocore.exceptions.ClientError as e:
@@ -189,6 +190,7 @@ def executeManifest(logger, manifest, conn):
                             conn.Bucket(cfg.get('store', 'location')).put_object(Key=fname, Body=compressedFile)
                             eachURL['written at'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT%H:%M:%S.%fZ')
                             eachURL['status'] = 'written to S3'
+                            written = True
                         else:
                             eachURL['status'] = e.response['Error']['Code']                
                     fileName = "s3://{0}/{1}".format(cfg.get('store', 'location'), fname)                                                          
@@ -215,8 +217,9 @@ def executeManifest(logger, manifest, conn):
                 if 'duplicate time' in timers:
                     eachURL['duplicate time'] = timers['duplicate time']
 
-                msg = "   Wrote {0} from {1}. Size: {2} Timers: {3}".format(fileName, eachURL['url'], fileSize, timers)
-                logger.info(msg)            
+                if written:
+                    msg = "   Wrote {0} from {1}. Size: {2} Timers: {3}".format(fileName, eachURL['url'], fileSize, timers)
+                    logger.info(msg)            
             
 
             except IOError, e:
@@ -383,7 +386,7 @@ def main(argv):
     if cfg.get('store', 'storage') == 'S3':
         s3_client = boto3.client(
             's3'        )
-        s3 = boto3.resource('s3')
+        s3 = boto3f.resource('s3')
 
     currentDate = startDate
     while currentDate <= endDate:
