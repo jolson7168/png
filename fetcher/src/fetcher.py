@@ -296,6 +296,7 @@ def main(argv):
     logger.info(msg)
     
     currentDate = startDate
+    uploadList = []
     while currentDate <= endDate:
         thisDate = currentDate.strftime('%Y/%m/%d/%H')
         logger.info("Fetching day: {0}".format(thisDate))
@@ -307,19 +308,20 @@ def main(argv):
             manifest.append(results)
 
         fetchFilesResults, fileList = executeManifest(logger, manifest, apiKeys)
-        
-
-        if cfg.get('store', 'storage') == 'S3':
-            s3_client = boto3.client(
-                's3'        )
-            s3 = boto3.resource('s3')
-            dumpFilesS3(fileList, s3, cfg.get('store', 'location'), logger)
-            verifyFilesS3(fileList, s3, cfg.get('store', 'location'), logger)
 
 
         if cfg.get('database', 'archiveResults') == 'Y':
             final = manifestToDb(fetchFilesResults)
+        uploadList = uploadList + fileList
         currentDate = currentDate + timedelta(hours = 1)
+
+
+    if cfg.get('store', 'storage') == 'S3':
+        s3_client = boto3.client(
+            's3'        )
+        s3 = boto3.resource('s3')
+        dumpFilesS3(uploadList, s3, cfg.get('store', 'location'), logger)
+        verifyFilesS3(uploadList, s3, cfg.get('store', 'location'), logger)
 
     # Clean up
     logger.info('Done! '+time.strftime("%Y%m%d%H%M%S")+'  ==============================')
