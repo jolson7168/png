@@ -20,7 +20,7 @@ logName = fetcher
 ; Configures the settings for fetching files
 ;
 ;  URL                  : top level url to fetch
-;  APIKEYS              : API keys to fetch
+;  APIKEYS              : Pipe delimited set of <key, value> tuples
 ;  LOGIN   	 	        : Login for authentication
 ;  PASSWORD   	 	    : Password for authentication
 ;  FILELOCATION   	 	: destination for fetched files
@@ -39,6 +39,7 @@ startoffset = -24
 ;----------------------------------------------------------
 ; Configures the destination for storage
 ;
+;  TEMP                 : Temp storage location
 ;  STORAGE              : Either 'local' or 'S3'
 ;  LOCATION   	 	    : Files system directory, or S3 bucket, depending on above
 ;  VERIFY               : Verify file was written to S3 by doing a read after the write
@@ -46,6 +47,7 @@ startoffset = -24
 ;  AWSSECRET            : sourced from os
 
 [store]
+temp = /tmp
 storage = S3
 location = <bucket name here>
 verify = N

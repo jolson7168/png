@@ -52,77 +52,11 @@ def getCmdLineParser():
                         help='Optional. Pull data until date YYYY/MM/DD/HH ')
     return parser
 
-
-def authGetURL(logger, url, apiKey = None, thisDate = None, requestType = None, conn = None):
-    timeProc = time.time()
-    timers={}
-
-    if thisDate and apiKey:
-        requestURL = '{0}/{1}/{2}'.format(url, apiKey, thisDate)
-    else:
-        requestURL = url
-
-    logger.info("   Requesting {0}".format(requestURL))
-    username = cfg.get('fetch', 'login')
-    password = cfg.get('fetch', 'password')
-
-    req = urllib2.Request(requestURL)
-
-    base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
-    authheader =  "Basic %s" % base64string
-    req.add_header("Authorization", authheader)
-    try:
-        timeStart = time.time()
-        handle = urllib2.urlopen(req)
-        timers['request time'] = round((time.time() - timeStart),3)
-        if requestType:
-            for line in handle:
-                if "<a href=" in line:
-                    quote1 = line.find('"')
-                    quote2 = line.find('"', quote1+1)
-                    authGetURL(logger = logger, url = line[quote1+1:quote2], conn = conn)
-        else:
-            back = len(requestURL) - requestURL.rfind("/") - 1
-            fname = requestURL[-1*back:]
-            timeWrite = time.time()
-
-            if cfg.get('store', 'storage') == 'local':
-                compressedFile = StringIO.StringIO(handle.read())
-                fileName = cfg.get('store', 'location')+'/'+fname           
-                with open(fileName, 'w') as outfile:
-                    outfile.write(compressedFile.read())
-                    outfile.close()
-            else:
-                compressedFile = cStringIO.StringIO(handle.read())
-                try:
-                    conn.Object(cfg.get('store', 'location'), fname).load()
-                    msg = "   Key {0} all ready exists in bucket {1}.".format(cfg.get('store', 'location'), fname)
-                    logger.error(msg)
-                    return
-                except botocore.exceptions.ClientError as e:
-                    if e.response['Error']['Code'] == "404":
-                        conn.Bucket(cfg.get('store', 'location')).put_object(Key=fname, Body=compressedFile)
-                        fileName = "s3://{0}/{1}".format(cfg.get('store', 'location'), fname)
-                    else:
-                        raise e                               
-
-            compressedFile.seek(0, os.SEEK_END)
-            fileSize = compressedFile.tell()
-
-            timers['write time'] = round((time.time() - timeWrite),3)
-            timers['proc time'] = round((time.time() - timeProc),3)
-            msg = "   Wrote {0} from {1}. Size: {2} Timers: {3}".format(fileName, requestURL, fileSize, timers)
-            logger.info(msg)
-            
-    except IOError, e:
-        msg =  "   {0} requesting file: {1}".format(e,requestURL)
-        logger.error(msg)
-
-def executeManifest(logger, manifest, conn):
+def executeManifest(logger, manifest, apiKeys):
 
     timeProc = time.time()
     timers={}
-
+    fileList = []
     username = cfg.get('fetch', 'login')
     password = cfg.get('fetch', 'password')
     base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
@@ -163,64 +97,28 @@ def executeManifest(logger, manifest, conn):
                 back = len(eachURL['url']) - eachURL['url'].rfind("/") - 1
                 fname = eachURL['url'][-1*back:]
 
-                # Write time includes verify and duplicate times
                 timeWrite = time.time()
                 written = False
-                if cfg.get('store', 'storage') == 'local':
-                    compressedFile = StringIO.StringIO(handle.read())
-                    fileName = cfg.get('store', 'location')+'/'+fname           
-                    with open(fileName, 'w') as outfile:
-                        outfile.write(compressedFile.read())
-                        outfile.close()
-                        eachURL['written at'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT%H:%M:%S.%fZ')
-                        written = True
-                else:
-                    compressedFile = cStringIO.StringIO(handle.read())
-                    try:
-                        timeStart = time.time()
-                        conn.Object(cfg.get('store', 'location'), fname).load()
-                        timers['duplicate time'] = round((time.time() - timeStart),3)
-                        msg = "   Key {0} all ready exists in bucket {1}.".format(fname, cfg.get('store', 'location'))
-                        logger.error(msg)
-                        eachURL['status'] = 'already exists in {0}'.format(cfg.get('store', 'location'))
-                    except botocore.exceptions.ClientError as e:
-                        pass
-                        timers['duplicate time'] = round((time.time() - timeStart),3)
-                        if e.response['Error']['Code'] == "404":
-                            conn.Bucket(cfg.get('store', 'location')).put_object(Key=fname, Body=compressedFile)
-                            eachURL['written at'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT%H:%M:%S.%fZ')
-                            eachURL['status'] = 'written to S3'
-                            written = True
-                        else:
-                            eachURL['status'] = e.response['Error']['Code']                
-                    fileName = "s3://{0}/{1}".format(cfg.get('store', 'location'), fname)                                                          
-                    eachURL['S3 destination'] = fileName
+                compressedFile = StringIO.StringIO(handle.read())
+
+                fileDate = fname.split("_")[2][:8]
+                apiKey = apiKeys[fname.split("_")[1]]
+                
+                fileName = cfg.get('store', 'temp')+'/'+fileDate+'_'+apiKey+'.gz'
+                fileList.append(fileName)          
+                with open(fileName, 'a') as outfile:
+                    outfile.write(compressedFile.read())
+                    outfile.close()
+                    eachURL['written at'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT%H:%M:%S.%fZ')
+                    written = True
 
                 compressedFile.seek(0, os.SEEK_END)
                 fileSize = compressedFile.tell()
-                if cfg.get('store', 'verify') == 'Y' and eachURL['status'] == 'written to S3':                
-                    timeVerify = time.time()
-
-                    # readFileSize = conn.Object(cfg.get('store', 'location'),fname).content_length()
-                    # There is no exists function that uses HEAD in boto3?!?
-                    # Do not use this until we figure out how to get the file size
-                    # without actually pulling the key... 
-                    timers['verify time'] = round((time.time() - timeVerify),3)
-                    if readFileSize == fileSize:
-                        eachURL['write verified'] = 'Yes'
-                    else:
-                        eachURL['write verified'] = 'Size Mismatch'
-
-                timers['write time'] = round((time.time() - timeWrite),3)
                 eachURL['size'] = fileSize
-                eachURL['write time'] = timers['write time']
-                if 'duplicate time' in timers:
-                    eachURL['duplicate time'] = timers['duplicate time']
 
                 if written:
                     msg = "   Wrote {0} from {1}. Size: {2} Timers: {3}".format(fileName, eachURL['url'], fileSize, timers)
-                    logger.info(msg)            
-            
+                    logger.info(msg)  
 
             except IOError, e:
                 msg =  "   {0} requesting file: {1}".format(e,eachURL['url'])
@@ -228,7 +126,7 @@ def executeManifest(logger, manifest, conn):
                 eachURL['status'] = msg
                 pass
 
-    return manifest
+    return manifest, fileList
 
 def getFileList(logger, url, apiKey = None, thisDate = None):
     timeProc = time.time()
@@ -352,6 +250,23 @@ def manifestToDb(results):
     conn.close()
     return True
 
+def dumpFilesS3(fileList, conn, bucket, logger):
+    for eachFile in fileList:
+        try:
+            keyName = eachFile.replace(cfg.get('store', 'temp')+'/','')
+            timeStart = time.time()
+            conn.Object(bucket, keyName).load()
+            #timers['duplicate time'] = round((time.time() - timeStart),3)
+            msg = "   Key {0} all ready exists in bucket {1}.".format(keyName, bucket)
+            logger.error(msg)
+        except botocore.exceptions.ClientError as e:
+            pass
+            #timers['duplicate time'] = round((time.time() - timeStart),3)
+            if e.response['Error']['Code'] == "404":
+                data = open(eachFile, 'r')
+                conn.Bucket(bucket).put_object(Key=keyName, Body = data)
+                written = True
+
 def main(argv):
 
     # Overhead to manage command line opts and config file
@@ -371,7 +286,11 @@ def main(argv):
         startDate =  (args.startDate + timedelta(hours = startOffset)).replace(minute=0, second=0, microsecond=0)
         endDate = (args.startDate + timedelta(hours = -1)).replace(minute=0, second=0, microsecond=0)
 
-    apiKeys = cfg.get('fetch', 'apiKeys').split(',')
+    apiKeys = {}
+    apiKeyMap = cfg.get('fetch','apiKeys').split('|')
+    for pair in apiKeyMap:
+        apiKeys[pair.split(',')[0]] = pair.split(',')[1]
+
     # Get the logger going
     logger = initLog(time.strftime("%Y%m%d%H%M%S"))
     logger.info('Starting Run: '+time.strftime("%Y%m%d%H%M%S")+'  ==============================')
@@ -381,23 +300,27 @@ def main(argv):
         msg = "Running {0}....".format(startDate.strftime('%Y/%m/%d %H:00'))
     logger.info(msg)
     
-
-    s3 = None
-    if cfg.get('store', 'storage') == 'S3':
-        s3_client = boto3.client(
-            's3'        )
-        s3 = boto3f.resource('s3')
-
     currentDate = startDate
     while currentDate <= endDate:
         thisDate = currentDate.strftime('%Y/%m/%d/%H')
         logger.info("Fetching day: {0}".format(thisDate))
         results = []
         manifest = []
+        fileList = []
         for eachKey in apiKeys:
             results = getFileList(logger, url = cfg.get('fetch', 'url'), apiKey = eachKey, thisDate = thisDate)
             manifest.append(results)
-        fetchFilesResults = executeManifest(logger, manifest, s3)
+
+        fetchFilesResults, fileList = executeManifest(logger, manifest, apiKeys)
+        
+
+        if cfg.get('store', 'storage') == 'S3':
+            s3_client = boto3.client(
+                's3'        )
+            s3 = boto3.resource('s3')
+            dumpFilesS3(fileList, s3, cfg.get('store', 'location'), logger)         
+
+
         if cfg.get('database', 'archiveResults') == 'Y':
             final = manifestToDb(fetchFilesResults)
         currentDate = currentDate + timedelta(hours = 1)
