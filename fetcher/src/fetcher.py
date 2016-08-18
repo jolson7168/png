@@ -193,10 +193,6 @@ def manifestToDb(results):
                         status = item['status']
                     else:
                         status = None 
-                    if 'duplicate time' in item:
-                        duplicateTime = item['duplicate time']
-                    else:
-                        duplicateTime = None
                     # "2016-08-07T17:29:21.274678Z" 
                     if 'requested at' in item:
                         requestedAt = item['requested at']
@@ -204,16 +200,7 @@ def manifestToDb(results):
                         requestedAtWrite = datetime.strftime(requestedAtS, "%Y-%m-%d %H:%M:%S")
                     else:
                         requestedAt = None
-                    if 'S3 destination' in item:
-                        S3Destination = item['S3 destination']
-                    else:
-                        S3Destination = None
-                    if 'written at' in item:  
-                        writtenAt = item['written at']
-                        writtenAtS = datetime.strptime(writtenAt, "%Y-%m-%dT%H:%M:%S.%fZ")
-                        writtenAtWrite = datetime.strftime(writtenAtS, "%Y-%m-%d %H:%M:%S")
-                    else:
-                        writtenAtWrite = None
+
                     if 'request time' in item:
                         requestTime = item['request time']
                     else:
@@ -222,27 +209,20 @@ def manifestToDb(results):
                         requestResponse = item['request http response']
                     else:   
                         requestResponse = None
-                    if 'write time' in item:
-                        writeTime = item['write time']
-                    else:
-                        writeTime = None
-                    if 'write verified' in item:
-                        writeVerified = item['writeVerified']
-                    else:
-                        writeVerified = None
+
                     if 'size' in item:
                         size = item['size']
                     else:
                         size = None
 
-                    t1 = (datadateWrite,url,apikey,key1,key2,key3,key4,requestedAtWrite,requestTime,size,requestResponse,S3Destination, duplicateTime, writtenAtWrite, writeTime, writeVerified, status,)
+                    t1 = (datadateWrite,url,apikey,key1,key2,key3,key4,requestedAtWrite,requestTime,size,requestResponse, status,)
                     writeList.append(t1)
 
     conn_string = "dbname='{0}' port='{1}' user='{2}' password='{3}' host='{4}'".format(cfg.get('database', 'name'), cfg.get('database', 'port'), cfg.get('database', 'user'), cfg.get('database', 'password'), cfg.get('database', 'host'))
     conn = psycopg2.connect(conn_string)
     cur = conn.cursor()
 
-    args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", x) for x in writeList)
+    args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", x) for x in writeList)
     sql = "INSERT INTO {0} VALUES ".format(cfg.get('database', 'table')) + args_str
     cur.execute("INSERT INTO {0} VALUES ".format(cfg.get('database', 'table')) + args_str) 
     conn.commit()
@@ -250,11 +230,12 @@ def manifestToDb(results):
     conn.close()
     return True
 
+# How about some logging here??
 def dumpFilesS3(fileList, conn, bucket, logger):
     for eachFile in fileList:
         try:
             keyName = eachFile.replace(cfg.get('store', 'temp')+'/','')
-            timeStart = time.time()
+            #timeStart = time.time()
             conn.Object(bucket, keyName).load()
             #timers['duplicate time'] = round((time.time() - timeStart),3)
             msg = "   Key {0} all ready exists in bucket {1}.".format(keyName, bucket)
@@ -265,7 +246,6 @@ def dumpFilesS3(fileList, conn, bucket, logger):
             if e.response['Error']['Code'] == "404":
                 data = open(eachFile, 'r')
                 conn.Bucket(bucket).put_object(Key=keyName, Body = data)
-                written = True
 
 def main(argv):
 

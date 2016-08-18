@@ -11,11 +11,6 @@ CREATE TABLE public.request_stats  (
 	requesttime        	numeric(6,3) NULL,
 	filesize           	int4 NULL,
 	requesthttpresponse	int2 NULL,
-	s3destination      	varchar(200) NULL,
-	duplicatetime      	numeric(6,3) NULL,
-	writeat            	timestamp NULL,
-	writetime          	numeric(6,3) NULL,
-	writeverified      	bool NULL,
 	status             	varchar(50) NULL,
 	CONSTRAINT fetchstats_pkey PRIMARY KEY(url)
 )
