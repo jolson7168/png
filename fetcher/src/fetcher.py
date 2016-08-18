@@ -126,7 +126,7 @@ def executeManifest(logger, manifest, apiKeys):
                 eachURL['status'] = msg
                 pass
 
-    return manifest, fileList
+    return manifest, list(set(fileList))
 
 def getFileList(logger, url, apiKey = None, thisDate = None):
     timeProc = time.time()
@@ -230,7 +230,7 @@ def manifestToDb(results):
     conn.close()
     return True
 
-# How about some logging here??
+# How about some logging here?? And beef this up....
 def dumpFilesS3(fileList, conn, bucket, logger):
     for eachFile in fileList:
         try:
@@ -238,7 +238,7 @@ def dumpFilesS3(fileList, conn, bucket, logger):
             #timeStart = time.time()
             conn.Object(bucket, keyName).load()
             #timers['duplicate time'] = round((time.time() - timeStart),3)
-            msg = "   Key {0} all ready exists in bucket {1}.".format(keyName, bucket)
+            msg = "   Key {0} already exists in bucket {1}.".format(keyName, bucket)
             logger.error(msg)
         except botocore.exceptions.ClientError as e:
             pass
@@ -246,6 +246,21 @@ def dumpFilesS3(fileList, conn, bucket, logger):
             if e.response['Error']['Code'] == "404":
                 data = open(eachFile, 'r')
                 conn.Bucket(bucket).put_object(Key=keyName, Body = data)
+
+# How about some logging here?? And beef this up....
+def verifyFilesS3(fileList, conn, bucket, logger):
+    for eachFile in fileList:
+        try:
+            keyName = eachFile.replace(cfg.get('store', 'temp')+'/','')
+            conn.Object(bucket, keyName).load()
+            msg = "   Key {0} successfully writen to bucket {1}.".format(keyName, bucket)
+            logger.info(msg)
+            os.remove(eachFile)
+        except botocore.exceptions.ClientError as e:
+            pass
+            #timers['duplicate time'] = round((time.time() - timeStart),3)
+            if e.response['Error']['Code'] == "404":
+                msg = "   Key {0} missing from bucket {1}.".format(keyName, bucket)
 
 def main(argv):
 
@@ -298,7 +313,8 @@ def main(argv):
             s3_client = boto3.client(
                 's3'        )
             s3 = boto3.resource('s3')
-            dumpFilesS3(fileList, s3, cfg.get('store', 'location'), logger)         
+            dumpFilesS3(fileList, s3, cfg.get('store', 'location'), logger)
+            verifyFilesS3(fileList, s3, cfg.get('store', 'location'), logger)
 
 
         if cfg.get('database', 'archiveResults') == 'Y':

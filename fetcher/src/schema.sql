@@ -17,3 +17,5 @@ CREATE TABLE public.request_stats  (
 DISTSTYLE EVEN
 SORTKEY ( datadate )
 GO
+
+grant all privileges on table public.request_stats to etl
