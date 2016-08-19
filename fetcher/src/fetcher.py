@@ -199,12 +199,13 @@ def manifestToDb(results):
                         requestedAtS = datetime.strptime(requestedAt, "%Y-%m-%dT%H:%M:%S.%fZ")
                         requestedAtWrite = datetime.strftime(requestedAtS, "%Y-%m-%d %H:%M:%S")
                     else:
-                        requestedAt = None
+                        requestedAtWrite = None
 
                     if 'request time' in item:
                         requestTime = item['request time']
                     else:
                         requestTime = None
+
                     if 'request http response' in item:
                         requestResponse = item['request http response']
                     else:   
