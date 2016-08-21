@@ -322,7 +322,7 @@ def main(argv):
         s3 = boto3.resource('s3')
 
     if s3:
-        dumpFilesS3(uploadList, s3, cfg.get('store', 'location'), logger)
+        dumpFilesS3(list(set(uploadList)), s3, cfg.get('store', 'location'), logger)
         #verifyFilesS3(uploadList, s3, cfg.get('store', 'location'), logger)
 
 
