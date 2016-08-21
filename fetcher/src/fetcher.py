@@ -236,17 +236,17 @@ def dumpFilesS3(fileList, conn, bucket, logger):
     for eachFile in fileList:
         try:
             keyName = eachFile.replace(cfg.get('store', 'temp')+'/','')
-            #timeStart = time.time()
             conn.Object(bucket, keyName).load()
-            #timers['duplicate time'] = round((time.time() - timeStart),3)
             msg = "   Key {0} already exists in bucket {1}.".format(keyName, bucket)
             logger.error(msg)
         except botocore.exceptions.ClientError as e:
             pass
             #timers['duplicate time'] = round((time.time() - timeStart),3)
             if e.response['Error']['Code'] == "404":
-                data = open(eachFile, 'r')
-                conn.Bucket(bucket).put_object(Key=keyName, Body = data)
+                #data = open(eachFile, 'r')
+                #conn.Bucket(bucket).put_object(Key=keyName, Body = data)
+                conn.meta.client.upload_file(eachFile, bucket, keyName, ExtraArgs= {"Metadata": {"mode": "33204","uid": "1000","gid": "1000"}})
+                os.remove(eachFile)
 
 # How about some logging here?? And beef this up....
 def verifyFilesS3(fileList, conn, bucket, logger):
@@ -296,8 +296,9 @@ def main(argv):
         msg = "Running {0}....".format(startDate.strftime('%Y/%m/%d %H:00'))
     logger.info(msg)
     
-    currentDate = startDate
+
     uploadList = []
+    currentDate = startDate
     while currentDate <= endDate:
         thisDate = currentDate.strftime('%Y/%m/%d/%H')
         logger.info("Fetching day: {0}".format(thisDate))
@@ -309,20 +310,22 @@ def main(argv):
             manifest.append(results)
 
         fetchFilesResults, fileList = executeManifest(logger, manifest, apiKeys)
-
+        uploadList = uploadList + fileList
 
         if cfg.get('database', 'archiveResults') == 'Y':
             final = manifestToDb(fetchFilesResults)
-        uploadList = uploadList + fileList
         currentDate = currentDate + timedelta(hours = 1)
-
 
     if cfg.get('store', 'storage') == 'S3':
         s3_client = boto3.client(
             's3'        )
         s3 = boto3.resource('s3')
+
+    if s3:
         dumpFilesS3(uploadList, s3, cfg.get('store', 'location'), logger)
-        verifyFilesS3(uploadList, s3, cfg.get('store', 'location'), logger)
+        #verifyFilesS3(uploadList, s3, cfg.get('store', 'location'), logger)
+
+
 
     # Clean up
     logger.info('Done! '+time.strftime("%Y%m%d%H%M%S")+'  ==============================')
