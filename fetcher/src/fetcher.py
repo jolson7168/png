@@ -346,7 +346,7 @@ def main(argv):
         s3 = boto3.resource('s3')
         targetFileList = list(set(uploadList))
         if cfg.get('store', 'rezip') == 'Y':
-            rezipFiles(targetFiles, logger)
+            rezipFiles(targetFileList, logger)
         dumpFilesS3(targetFileList, s3, cfg.get('store', 'location'), logger)
         #verifyFilesS3(uploadList, s3, cfg.get('store', 'location'), logger)
 
