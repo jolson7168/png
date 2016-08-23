@@ -94,9 +94,6 @@ class MRCountEvents(MRJob):
         self.masterList.setdefault(key, 0)
         self.masterList[key] = self.masterList[key] + 1
         self.currentLine = self.currentLine + 1
-
-        if self.currentLine % 100000 == 0:
-            sys.stderr.write('{0}\n'.format(self.currentLine))
                  
     def final_get_events(self):
         for key, val in self.masterList.iteritems():
