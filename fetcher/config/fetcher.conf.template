@@ -43,14 +43,14 @@ startoffset = -24
 ;  STORAGE              : Either 'local' or 'S3'
 ;  LOCATION   	 	    : Files system directory, or S3 bucket, depending on above
 ;  VERIFY               : Verify file was written to S3 by doing a read after the write
-;  AWSKEY               : sourced from os
-;  AWSSECRET            : sourced from os
+;  REZIP                : Re-zip the gz concatenated files
 
 [store]
 temp = /tmp
 storage = S3
 location = <bucket name here>
 verify = N
+rezip = Y
 ;----------------------------------------------------------
 
 ;----------------------------------------------------------

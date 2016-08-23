@@ -7,7 +7,7 @@ import cStringIO
 import StringIO
 import base64
 import json
-
+import gzip
 
 from urlparse import urlparse
 from ConfigParser import RawConfigParser
@@ -106,12 +106,13 @@ def executeManifest(logger, manifest, apiKeys):
                 
                 fileName = cfg.get('store', 'temp')+'/'+fileDate+'_'+apiKey+'.gz'
                 fileList.append(fileName)          
-                with open(fileName, 'a') as outfile:
+                with open(fileName, 'ab') as outfile:
                     outfile.write(compressedFile.read())
                     outfile.close()
                     eachURL['written at'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT%H:%M:%S.%fZ')
                     written = True
 
+                fileSize = 0
                 compressedFile.seek(0, os.SEEK_END)
                 fileSize = compressedFile.tell()
                 eachURL['size'] = fileSize
@@ -263,6 +264,29 @@ def verifyFilesS3(fileList, conn, bucket, logger):
             if e.response['Error']['Code'] == "404":
                 msg = "   Key {0} missing from bucket {1}.".format(keyName, bucket)
 
+# How about some logging here?? And beef this up....
+def rezipFiles(fileList, logger):
+    try:
+        for aFile in fileList:
+            with gzip.open(aFile, 'rb') as infile:
+                with open(aFile[:-3], 'wb') as outfile:
+                    for line in infile:
+                        outfile.write(line)
+                outfile.close()
+            infile.close()
+            os.remove(aFile)        
+            with open(aFile[:-3], 'rb') as infile2:
+                with gzip.open(aFile, 'wb') as outfile2:
+                    for line2 in infile2:
+                        outfile2.write(line2)
+                outfile2.close()
+            infile2.close()    
+            os.remove(aFile[:-3])
+    except Exception as e:
+        msg = "Exception re-zipping files. Error: {0} ".format(e)
+        logger.error(msg)
+
+
 def main(argv):
 
     # Overhead to manage command line opts and config file
@@ -320,9 +344,10 @@ def main(argv):
         s3_client = boto3.client(
             's3'        )
         s3 = boto3.resource('s3')
-
-    if s3:
-        dumpFilesS3(list(set(uploadList)), s3, cfg.get('store', 'location'), logger)
+        targetFileList = list(set(uploadList))
+        if cfg.get('store', 'rezip') == 'Y':
+            rezipFiles(targetFiles, logger)
+        dumpFilesS3(targetFileList, s3, cfg.get('store', 'location'), logger)
         #verifyFilesS3(uploadList, s3, cfg.get('store', 'location'), logger)
 
 
