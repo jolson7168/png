@@ -107,7 +107,7 @@ class MRCountEvents(MRJob):
         # This is awkward
         cfg = RawConfigParser()
         # This is awkward, too
-        cfg.read('/tmp/event_counts.conf')
+        cfg.read('/etc/mr/event_counts.conf')
         self.eventList = cfg.get('data','events').split(',')
         for event in self.eventList:
             if event in row:
