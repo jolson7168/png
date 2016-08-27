@@ -68,7 +68,6 @@ class MRCountEvents(MRJob):
                     coded = self.get_between(line, 'data=', '&')
                     decoded = self.decode_data(coded)
                     line = line.replace(coded, decoded)
-                    sys.stderr.write(line+'\n')
                     if '&s=' in line:
                         id1 = self.get_between(line, '&s=', '&')
                     elif ' s=' in line:
