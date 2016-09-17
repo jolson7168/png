@@ -89,7 +89,7 @@ class MRCountEvents(MRJob):
                             id1 = int(id1[3:])
                         row.append(id1) 
                         fname = self.deconstruct_filename(jobconf_from_env('mapreduce.map.input.file'))
-                        row.append(datetime.strftime(datetime.strptime(fname['date'], "%Y%m%d"), "%Y-%m-%d"))
+                        #row.append(datetime.strftime(datetime.strptime(fname['date'], "%Y%m%d"), "%Y-%m-%d"))
                         row.append(fname['api']) 
                         row.append(stat) 
                         
@@ -104,25 +104,6 @@ class MRCountEvents(MRJob):
                         if 'st3=' in line:
                             st3 = self.get_between(line, 'st3=', '&')
                         row.append(st3) 
-
-                        eventStartedTime = ""
-                        row.append(eventStartedTime) 
-                        
-                        eventStartedLocalTime = ""
-                        row.append(eventStartedLocalTime) 
-
-                        startBankroll = ""
-                        row.append(startBankroll) 
-
-                        startEventVal = ""
-                        row.append(startEventVal) 
-
-
-                        startGameLevel = ""
-                        row.append(startGameLevel) 
-
-                        sttb = ""
-                        row.append(sttb) 
 
                         micro = False
                         nowSting = ""
