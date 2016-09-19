@@ -89,7 +89,20 @@ class MRCountEvents(MRJob):
                             id1 = int(id1[3:])
                         row.append(id1) 
                         fname = self.deconstruct_filename(jobconf_from_env('mapreduce.map.input.file'))
-                        #row.append(datetime.strftime(datetime.strptime(fname['date'], "%Y%m%d"), "%Y-%m-%d"))
+  
+                        micro = False
+                        nowSting = ""
+                        if '&ts=' in line:
+                            timeval = self.get_between(line, '&ts=', '&')
+                            now = int(timeval)
+                            if len(timeval) > 10:
+                                nowTimeStamp = datetime.fromtimestamp(now/1000)
+                                micro = True
+                            else:
+                                nowTimeStamp = datetime.fromtimestamp(now)
+                            nowString = nowTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
+                        row.append(nowString)
+
                         row.append(fname['api']) 
                         row.append(stat) 
                         
@@ -105,17 +118,6 @@ class MRCountEvents(MRJob):
                             st3 = self.get_between(line, 'st3=', '&')
                         row.append(st3) 
 
-                        micro = False
-                        nowSting = ""
-                        if '&ts=' in line:
-                            timeval = self.get_between(line, '&ts=', '&')
-                            now = int(timeval)
-                            if len(timeval) > 10:
-                                nowTimeStamp = datetime.fromtimestamp(now/1000)
-                                micro = True
-                            else:
-                                nowTimeStamp = datetime.fromtimestamp(now)
-                            nowString = nowTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
                         row.append(nowString)
                         
                         startedString = ""
