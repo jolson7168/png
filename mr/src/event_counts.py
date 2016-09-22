@@ -10,6 +10,7 @@ import urllib
 import os
 import sys
 from datetime import datetime
+from datetime import timedelta
 from ConfigParser import RawConfigParser
 
 class MRCountEvents(MRJob):
@@ -80,17 +81,33 @@ class MRCountEvents(MRJob):
                     event = self.get_between(line, '&n=', '&')
                 elif ' n=' in line:
                     event = self.get_between(line, ' n=', '&')
-                dataDate = datetime.strftime(datetime.strptime(
-                                self.deconstruct_filename(jobconf_from_env('mapreduce.map.input.file'))['date'], "%Y%m%d"), "%Y-%m-%d")
+                dataDateStamp = datetime.strptime(self.deconstruct_filename(jobconf_from_env('mapreduce.map.input.file'))['date'], "%Y%m%d")
+                dataDate = datetime.strftime(dataDateStamp, "%Y-%m-%d")
                 api = self.deconstruct_filename(jobconf_from_env('mapreduce.map.input.file'))['api']
-                key = (dataDate, api, int(id1), event)
+
+                timeval = ''
+                if '&ts=' in line:
+                    timeval = self.get_between(line, '&ts=', '&')
+                elif ' ts=' in line:
+                    timeval = self.get_between(line, ' ts=', '&')
+                if len(timeval) > 0:
+                    now = int(timeval)
+                    if len(timeval) > 10:
+                        nowTimeStamp = datetime.fromtimestamp(now/1000)
+                        micro = True
+                    else:
+                        nowTimeStamp = datetime.fromtimestamp(now)
+
+                    if (nowTimeStamp > (dataDateStamp - timedelta(hours=1))) and (nowTimeStamp< (dataDateStamp + timedelta(days=1))):
+                        key = (dataDate, api, int(id1), event)
+
         except KeyError as e:
             sys.stderr.write('ERROR: Missing expected key: {0} Line: {1} File: {2}{3}'.format(e, self.currentLine,jobconf_from_env('mapreduce.map.input.file'),'\n'))
             pass
         except Exception as e:
             sys.stderr.write('ERROR: {0} Line: {1} File: {2}{3}'.format(e, self.currentLine,jobconf_from_env('mapreduce.map.input.file'),'\n'))
             pass
-     
+
         self.masterList.setdefault(key, 0)
         self.masterList[key] = self.masterList[key] + 1
         self.currentLine = self.currentLine + 1
