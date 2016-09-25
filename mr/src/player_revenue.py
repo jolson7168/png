@@ -181,6 +181,8 @@ class MRCountEvents(MRJob):
                         saleName = dataObj['saleName']
                         if saleName == 'null':
                             saleName = ''
+                        if saleName == 'None':
+                            saleName = ''
                     row.append(saleName)
 
                     saleMult = ''
