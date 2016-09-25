@@ -41,8 +41,7 @@ class MRCountEvents(MRJob):
 
     def get_json(self, data):
         try:
-            decoded = self.decode_data(data)
-            retval = json.loads(decoded)          
+            retval = json.loads(data)          
             return retval
         except TypeError as e:
             raise TypeError(e)
@@ -58,16 +57,21 @@ class MRCountEvents(MRJob):
 
         self.currentLine = self.currentLine + 1
         if line[0] != '#':
+            stat = 'None'
             if 'n=' in line:
                 stat = self.get_between(line, 'n=', '&')
-            else:
-                stat = 'None'
-            if stat in ['purchase']:
+            elif 'mtu ' in line:
+                if self.deconstruct_filename(jobconf_from_env('mapreduce.map.input.file'))['api'] <> 'desktop':
+                    stat = 'mtu'
+            if stat in ['mtu', 'purchase']:
                 try:
                     row = [] 
                     coded = self.get_between(line, 'data=', '&')
                     decoded = self.decode_data(coded)
                     line = line.replace(coded, decoded)
+
+                    dataObj = self.get_json(decoded)
+
                     if '&s=' in line:
                         id1 = self.get_between(line, '&s=', '&')
                     elif ' s=' in line:
@@ -82,128 +86,242 @@ class MRCountEvents(MRJob):
 
                     row.append(self.deconstruct_filename(jobconf_from_env('mapreduce.map.input.file'))['api'].replace('"',''))
 
-                    nowSting = ""
+                    micro = False
+                    nowSting = ''
                     if '&ts=' in line:
-                        now = int(self.get_between(line, '&ts=', '&'))
-                        nowTimeStamp = datetime.fromtimestamp(now/1000)
+                        timeval = self.get_between(line, '&ts=', '&')
+                        now = int(timeval)
+                        if len(timeval) > 10:
+                            nowTimeStamp = datetime.fromtimestamp(now/1000)
+                            micro = True
+                        else:
+                            nowTimeStamp = datetime.fromtimestamp(now)
                         nowString = nowTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
-
                     row.append(nowString)
                     
-                    startedString = ""
-                    if '{"ts":' in line:
-                        started = int(self.get_between(line, '{"ts":', ','))
-                        startedTimeStamp = datetime.fromtimestamp(started/1000)
-                        startedString = startedTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
+
+                    startedString = ''
+                    if 'ts' in dataObj:
+                        try:
+                            started = int(dataObj['ts'])
+                            startedTimeStamp = datetime.fromtimestamp(started/1000)
+                            startedString = startedTimeStamp.strftime("%Y-%m-%d %H:%M:%S")                    
+                        except ValueError as e:
+                            pass
+                            startedString = ''
+                        except TypeError as e:
+                            pass
+                            startedString = ''
                     row.append(startedString)
 
-                    bankroll = ""
-                    if '"bankroll":' in line:
-                        bankroll = int(self.get_between(line, '"bankroll":', ','))
+
+                    bankroll = ''
+                    if 'bankroll' in dataObj:
+                        try:
+                            bankroll = int(dataObj['bankroll'])
+                        except ValueError as e:
+                            pass
+                            bankroll = ''
+                        except TypeError as e:
+                            pass
+                            bankroll = ''
                     row.append(bankroll)
 
-                    gameLevel = ""
-                    if '"gameLevel":' in line:
-                        gameLevel = int(self.get_between(line, '"gameLevel":', ','))
+
+                    gameLevel = ''
+                    if 'gameLevel' in dataObj:
+                        try:
+                            gameLevel = int(dataObj['gameLevel'])
+                        except ValueError as e:
+                            pass
+                            gameLevel = ''
+                        except TypeError as e:
+                            pass
+                            gameLevel = ''
                     row.append(gameLevel)
 
-                    level = ""
-                    if '"level":' in line:
-                        level = int(self.get_between(line, '"level":', ','))
+                    level = ''
+                    if 'level' in dataObj:
+                        level = dataObj['level']
                     row.append(level)
 
-                    hoid = ""
-                    if '"hotOfferId":' in line:
-                        hoid = self.get_between(line, '"hotOfferId":', ',')
+                    hoid = ''
+                    if 'hotOfferId' in dataObj:
+                        hoid = dataObj['hotOfferId']
                         try:
                             hoid = int(hoid)
                         except ValueError as e:
                             pass
                             if hoid == 'null':
-                                hoid = ""
+                                hoid = ''
+                        except TypeError as e:
+                            pass
+                            hoid = ''
                     row.append(hoid)
 
-                    hoex = ""
-                    if '"hotOfferExpires":' in line:
-                        hoex = self.get_between(line, '"hotOfferExpires":', ',')
+                    hoex = ''
+                    if 'hotOfferExpires' in dataObj:
+                        hoex = dataObj['hotOfferExpires']
                         try:
                             hoex = int(hoex)
                             hoexTimeStamp = datetime.fromtimestamp(hoex/1000)
                             hoex = hoexTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
                         except ValueError as e:
                             pass                        
-                            hoex = ""
+                            hoex = ''
+                        except TypeError as e:
+                            pass                        
+                            hoex = ''
                     row.append(hoex)
 
-                    saleName = ""
-                    if '"saleName":' in line:
-                        saleName = self.get_between(line, '"saleName":', ',').replace('null','')
+
+
+                    saleName = ''
+                    if 'saleName' in dataObj:
+                        saleName = dataObj['saleName']
+                        if saleName == 'null':
+                            saleName = ''
                     row.append(saleName)
 
-                    saleMult = ""
-                    if '"saleMultiplier":' in line:
-                        saleMult = self.get_between(line, '"saleMultiplier":', ',')
+                    saleMult = ''
+                    if 'saleMultiplier' in dataObj:
+                        saleMult = dataObj['saleMultiplier']
                         try:
                             saleMult = float(saleMult)
                         except ValueError as e:
+                            pass
+                            saleMult = ''
+                        except TypeError as e:
                             pass                        
-                            saleMult = ""
+                            saleMult = ''
                     row.append(saleMult)
 
-                    price = ""
-                    if '"price":' in line:
-                        price = self.get_between(line, '"price":', ',')
+                    price = ''
+                    if 'price' in dataObj:
+                        price = dataObj['price']
                         try:
                             price = float(price)
                         except ValueError as e:
                             pass                        
-                            price = ""
+                            price = ''
+                        except TypeError as e:
+                            pass                        
+                            price = ''
                     row.append(price)
 
-                    ca = ""
-                    if '"creditAmount":' in line:
-                        ca = int(self.get_between(line, '"creditAmount":', ','))
-                    row.append(ca)
-
-                    eventVal = ""
-                    if '"eventValue":' in line:
-                        eventVal = self.get_between(line, '"eventValue":', ',').replace('"','')
+                    ca = ''
+                    if 'creditAmount' in dataObj:
                         try:
-                            eventVal = float(eventVal)
+                            ca = int(dataObj['creditAmount'])
                         except ValueError as e:
                             pass                        
-                            eventVal = ""
-                    row.append(eventVal)
+                            ca = ''
+                        except TypeError as e:
+                            pass                        
+                            ca = ''
+                    row.append(ca)
 
-                    ttb = ""
-                    if '"timeTillBonus":' in line:
-                        ttb = int(self.get_between(line, '"timeTillBonus":', ','))
-                        nextBonus = started + ttb
-                        nextBonusTimeStamp = datetime.fromtimestamp(nextBonus/1000)
-                        nextBonusString = nextBonusTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
-                    row.append(nextBonusString)
+                    eventVal = ''
+                    if 'eventValue' in dataObj:
+                        try:
+                            if isinstance(dataObj['eventValue'], (int, long)):
+                                eventVal = int(dataObj['eventValue'])
+                            elif isinstance(dataObj['eventValue'], float):
+                                eventVal = float(dataObj['eventValue'])
+                            elif dataObj['eventValue'] is None:                                
+                                eventVal = ''
+                            else:
+                                eventVal = dataObj['eventValue']
+                        except ValueError as e:
+                            pass
+                            eventVal = ''
+                        except ValueError as e:
+                            pass                        
+                            eventVal = ''
+                        
+                    row.append(eventVal) 
 
-                    xp = ""
-                    if '"xp":' in line:
-                        xp = int(self.get_between(line, '"xp":', ','))
+                    ettb = ''
+                    if 'timeTillBonus' in dataObj:
+                        ettb = int(dataObj['timeTillBonus'])
+                        try:
+                            ettbTimeStamp = datetime.fromtimestamp((ettb+now)/1000)
+                            ettb = ettbTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
+                        except ValueError as e:
+                            pass                        
+                            ettb = ''
+                        except TypeError as e:
+                            pass
+                            ettb = ''
+                    row.append(ettb)
+
+                    xp = ''
+                    if 'xp' in dataObj:
+                        try:
+                            xp = int(dataObj['xp'])
+                        except ValueError as e:
+                            pass                        
+                            xp = ''
+                        except TypeError as e:
+                            pass
+                            xp = ''
                     row.append(xp)
 
-                    room=""
-                    if '"room":' in line:
-                        room = self.get_between(line, '"room":', ',').replace('null','')
+                    room=''
+                    if 'room' in dataObj:
+                        room = dataObj['room']
+                        if room == 'null':
+                            room = ''
                     row.append(room)
 
-                    tz=""
-                    if '"tz":' in line:
-                        tz = self.get_between(line, '"tz":', '}').replace('null','')
+                    tz=''
+                    if 'tz' in dataObj:
+                        tz = dataObj['tz']
+                        if tz == 'null':
+                            tz = ''
                     row.append(tz)
 
 
-                    tester = ""
-                    if '"isTester":' in line:
-                        tester = self.get_between(line, '"isTester":', ',').replace('null','').replace('"','')
+                    tester = ''
+                    if 'isTester' in dataObj:
+                        tester = dataObj['isTester']
                     row.append(tester)
 
+
+                    appVersion=''
+                    if 'appVersion' in dataObj:
+                        appVersion = dataObj['appVersion']
+                    row.append(appVersion)
+
+                    deviceOS=''
+                    if 'deviceOS' in dataObj:
+                        deviceOS = dataObj['deviceOS']
+                    row.append(deviceOS)
+
+
+                    deviceOSVersion=''
+                    if 'deviceOSVersion' in dataObj:
+                        deviceOSVersion = dataObj['deviceOSVersion']
+                    row.append(deviceOSVersion)
+
+                    deviceName=''
+                    if 'deviceName' in dataObj:
+                        deviceName = (dataObj['deviceName'].replace(',','-'))
+                    row.append(deviceName)
+
+                    v1=''
+                    if '&v=' in line:
+                        v = self.get_between(line, '&v=', '&')
+                        try:
+                            v1 = int(v)
+                        except ValueError as e:
+                            pass
+                            v1 = ''
+                        except TypeError as e:
+                            pass
+                            v1 = ''
+                    row.append(v1)
+                
                     row.append(jobconf_from_env('mapreduce.map.input.file'))
                     row.append(self.currentLine)
 
