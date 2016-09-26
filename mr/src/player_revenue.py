@@ -174,8 +174,6 @@ class MRCountEvents(MRJob):
                             hoex = ''
                     row.append(hoex)
 
-
-
                     saleName = ''
                     if 'saleName' in dataObj:
                         saleName = dataObj['saleName']
@@ -208,6 +206,16 @@ class MRCountEvents(MRJob):
                             price = ''
                         except TypeError as e:
                             pass                        
+                            price = ''
+                    elif '&v=' in line:
+                        price1 = self.get_between(line, '&v=', '&')
+                        try:
+                            price = (float(price1)/100)
+                        except ValueError as e:
+                            pass
+                            price = ''
+                        except TypeError as e:
+                            pass
                             price = ''
                     row.append(price)
 
@@ -310,19 +318,6 @@ class MRCountEvents(MRJob):
                     if 'deviceName' in dataObj:
                         deviceName = (dataObj['deviceName'].replace(',','-'))
                     row.append(deviceName)
-
-                    v1=''
-                    if '&v=' in line:
-                        v = self.get_between(line, '&v=', '&')
-                        try:
-                            v1 = int(v)
-                        except ValueError as e:
-                            pass
-                            v1 = ''
-                        except TypeError as e:
-                            pass
-                            v1 = ''
-                    row.append(v1)
                 
                     row.append(jobconf_from_env('mapreduce.map.input.file'))
                     row.append(self.currentLine)
