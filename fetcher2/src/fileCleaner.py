@@ -95,7 +95,12 @@ def cleanLine(line, timeStart, fileName, lineNo):
     retval = {}
     try:
         if 'data=' in line:
-            retval = json.loads(decode_data(get_between(line, 'data=', '&')))
+            try:
+                retval = json.loads(decode_data(get_between(line, 'data=', '&')))
+            except Exception as e:
+                pass 
+                retval['status'] = 'Error decoding data'
+                retval['data'] = get_between(line, 'data=', '&')
 
         id1 = None
         if '&s=' in line:

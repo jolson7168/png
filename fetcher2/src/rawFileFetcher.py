@@ -16,7 +16,6 @@ from datetime import timedelta
 
 import boto3
 import botocore
-import psycopg2
 
 cfg = RawConfigParser()
 
@@ -118,8 +117,8 @@ def getURL(logger, url, s3, bucketName, rawFileQueue):
         written = True
 
         dumpFileS3(fileName, s3, bucketName, logger)
-
-        sendToQueue(rawFileQueue, fileName.replace(cfg.get('store', 'temp')+'/','https://s3.amazonaws.com/{0}/'.format(bucketName)), logger)
+        val = {'bucket': bucketName, 'key': fileName.replace(cfg.get('store', 'temp')+'/','')}
+        sendToQueue(rawFileQueue, json.dumps(val), logger)
         fileSize = 0
         compressedFile.seek(0, os.SEEK_END)
         fileSize = compressedFile.tell()
