@@ -129,7 +129,7 @@ def main(argv):
                 thisFileName = tempLoc+'/'+pathObj['key']
                 s3_client.download_file(pathObj['bucket'], pathObj['key'], thisFileName)
                 with open(targetName, 'ab') as outfile:
-                    with open(thisFileName) as infile:
+                    with gzip.open(thisFileName, 'rb') as infile:
                         for line in infile:
                             outfile.write(line)
                         infile.close()
