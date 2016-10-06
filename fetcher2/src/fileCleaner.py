@@ -226,7 +226,12 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
                         masterSet.append(json.dumps(collections.OrderedDict(sorted(cleanedObj.items()))))
                         outFile.write(json.dumps(cleanedObj)+'\n')
             inFile.close()
-            os.remove(tempFileName)
+            try:
+                os.remove(tempFileName)
+            except OSError as e:
+                pass
+                msg = 'Error deleting OS file {0}'.format(tempFileName)
+                logger.info(msg)
     outFile.close()
     dumpFileS3(tempFileName.replace('.gz','_cleaned.gz'), s3, targetBucket, logger)
     targetObj = {"bucket": targetBucket,"key": tempFileName.replace('.gz','_cleaned.gz').replace(tempLoc+'/','')}
