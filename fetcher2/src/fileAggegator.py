@@ -114,24 +114,27 @@ def main(argv):
     s3 = boto3.resource('s3')
 
     done = False
+    masterList = []
     while not done:
         messages = cleanFileQueue.receive_messages(WaitTimeSeconds = 10)
         if len(messages) == 0:
             done = True
         else:
-            pathObj = json.loads(messages[0].body)
-            tempLoc = cfg.get('store','temp')
-            fileDate = pathObj['key'].split('_')[2][:8]
-            targetName = tempLoc +'/'+fileDate+'.gz'
-            thisFileName = tempLoc+'/'+pathObj['key']
-            s3_client.download_file(pathObj['bucket'], pathObj['key'], thisFileName)
-            with open(targetName, 'ab') as outfile:
-                with open(thisFileName) as infile:
-                    for line in infile:
-                        outfile.write(line)
-                    infile.close()
-                outfile.close()
-            os.remove(thisFileName)
+            if messages[0].body not in masterList:
+                masterList.append(messages[0].body)
+                pathObj = json.loads(messages[0].body)
+                tempLoc = cfg.get('store','temp')
+                fileDate = pathObj['key'].split('_')[2][:8]
+                targetName = tempLoc +'/'+fileDate+'.gz'
+                thisFileName = tempLoc+'/'+pathObj['key']
+                s3_client.download_file(pathObj['bucket'], pathObj['key'], thisFileName)
+                with open(targetName, 'ab') as outfile:
+                    with open(thisFileName) as infile:
+                        for line in infile:
+                            outfile.write(line)
+                        infile.close()
+                    outfile.close()
+                os.remove(thisFileName)
             messages[0].delete()
     rezipFile(targetName, logger)
     dumpFileS3(targetName, s3, cfg.get('store','targetbucket'),logger)

@@ -54,6 +54,7 @@ def dumpFileS3(aFile, conn, bucket, logger):
         conn.Object(bucket, keyName).load()
         msg = "   Key {0} already exists in bucket {1}.".format(keyName, bucket)
         logger.error(msg)
+        os.remove(aFile)
     except botocore.exceptions.ClientError as e:
         pass
         if e.response['Error']['Code'] == "404":
