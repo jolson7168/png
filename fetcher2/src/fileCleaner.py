@@ -234,10 +234,21 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
                 msg = 'Error deleting OS file {0}'.format(tempFileName)
                 logger.info(msg)
     outFile.close()
-    dumpFileS3(tempFileName.replace('.gz','_cleaned.gz'), s3, targetBucket, logger)
-    targetObj = {"bucket": targetBucket,"key": tempFileName.replace('.gz','_cleaned.gz').replace(tempLoc+'/','')}
-    sendToQueue(targetQueue, json.dumps(targetObj), logger)
-    return True
+
+    valid = False
+    try:
+        with gzip.open(tempFileName.replace('.gz','_cleaned.gz'), 'rb') as infileTest:
+            test = infileTest.read()
+        infileTest.close()
+        valid = True    
+    except Exception as e:
+        pass
+
+    if valid:
+        dumpFileS3(tempFileName.replace('.gz','_cleaned.gz'), s3, targetBucket, logger)
+        targetObj = {"bucket": targetBucket,"key": tempFileName.replace('.gz','_cleaned.gz').replace(tempLoc+'/','')}
+        sendToQueue(targetQueue, json.dumps(targetObj), logger)
+    return valid
 
 def main(argv):
 
@@ -277,9 +288,12 @@ def main(argv):
             done = True
         else:
             results = cleanFile(logger, s3_client, s3, json.loads(messages[0].body), cfg.get('store','targetbucket'), cleanFileQueue, cfg.get('store','temp'), apiKeys)
-            sendToQueue(metricsQueue, json.dumps(results), logger)
-            messages[0].delete()
-
+            if results:
+                sendToQueue(metricsQueue, json.dumps(results), logger)
+                messages[0].delete()
+            else:
+                logger.info('Error process file {0} - did not pass gzip test'.format(json.loads(messages[0].body))
+                
 
 
     # Clean up

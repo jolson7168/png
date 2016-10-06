@@ -2,12 +2,10 @@ import os
 import sys
 import time
 import logging
-import urllib
-import cStringIO
-import StringIO
 import base64
 import json
 import gzip
+import shutil
 
 from urlparse import urlparse
 from ConfigParser import RawConfigParser
@@ -129,10 +127,22 @@ def main(argv):
                 thisFileName = tempLoc+'/'+pathObj['key']
                 s3_client.download_file(pathObj['bucket'], pathObj['key'], thisFileName)
                 with open(targetName, 'ab') as outfile:
-                    with gzip.open(thisFileName, 'rb') as infile:
-                        for line in infile:
-                            outfile.write(line)
-                        infile.close()
+                    valid = True
+                    try:
+                        with gzip.open(thisFileName, 'rb') as infileTest:
+                            test = infileTest.read()
+                    except Exception as e:
+                        pass
+                        print('Error: {0} - {1}'.format(thisFileName, e))
+                        valid = False
+                    if valid:    
+                        with open(thisFileName, 'rb') as infile:
+                            try:
+                                shutil.copyfileobj(infile, outfile)
+                            except Exception as e:
+                                pass
+                                print('Error: {0} - {1}'.format(thisFileName, e))
+                            infile.close()
                     outfile.close()
                 os.remove(thisFileName)
             messages[0].delete()
