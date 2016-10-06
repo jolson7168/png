@@ -148,7 +148,7 @@ def main(argv):
             messages[0].delete()
     rezipFile(targetName, logger)
     dumpFileS3(targetName, s3, cfg.get('store','targetbucket'),logger)
-
+    os.remove(targetName)
 
 
 
