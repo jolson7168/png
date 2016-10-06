@@ -222,8 +222,8 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
                     cleanedObj['sourceLineNumber'] = current
                     cleanedObj['api'] = apiKeys[api]
                     cleanedObj['requestDate'] = getDate(pathObj['key'])
-                    if json.dumps(collections.OrderedDict(sorted(cleanedObj.items())) not in masterSet:
-                        masterSet.append(json.dumps(collections.OrderedDict(sorted(cleanedObj.items())))
+                    if json.dumps(collections.OrderedDict(sorted(cleanedObj.items()))) not in masterSet:
+                        masterSet.append(json.dumps(collections.OrderedDict(sorted(cleanedObj.items()))))
                         outFile.write(json.dumps(cleanedObj)+'\n')
             inFile.close()
             os.remove(tempFileName)
