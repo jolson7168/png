@@ -16,7 +16,7 @@ from datetime import timedelta
 
 import boto3
 import botocore
-
+import collections
 
 cfg = RawConfigParser()
 
@@ -203,6 +203,7 @@ def getDate(fname):
 
 def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc, apiKeys):
 
+    masterSet = []
     tempFileName = tempLoc+'/'+pathObj['key']
     s3_client.download_file(pathObj['bucket'], pathObj['key'], tempFileName)
     with gzip.open(tempFileName.replace('.gz','_cleaned.gz'), 'wb') as outFile:
@@ -221,7 +222,9 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
                     cleanedObj['sourceLineNumber'] = current
                     cleanedObj['api'] = apiKeys[api]
                     cleanedObj['requestDate'] = getDate(pathObj['key'])
-                    outFile.write(json.dumps(cleanedObj)+'\n')
+                    if json.dumps(collections.OrderedDict(sorted(cleanedObj.items())) not in masterSet:
+                        masterSet.append(json.dumps(collections.OrderedDict(sorted(cleanedObj.items())))
+                        outFile.write(json.dumps(cleanedObj)+'\n')
             inFile.close()
             os.remove(tempFileName)
     outFile.close()

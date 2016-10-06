@@ -57,7 +57,12 @@ def dumpFileS3(aFile, conn, bucket, logger):
         pass
         if e.response['Error']['Code'] == "404":
             conn.meta.client.upload_file(aFile, bucket, keyName, ExtraArgs= {"Metadata": {"mode": "33204","uid": "1000","gid": "1000"}})
-            os.remove(aFile)
+            try:
+                os.remove(aFile)
+            except OSError as e:
+                pass
+                msg = 'Error deleting OS file {0}'.format(aFile)
+                logger.info(msg)
 
 def getURL(logger, url, s3, bucketName, rawFileQueue):
 
