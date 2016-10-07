@@ -211,6 +211,15 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
         with gzip.open(tempFileName, 'rb') as inFile:
             current = 0
             for line in inFile:
+                dupe = False
+                if 's=' in line:
+                    firstSpace = line.find(' ')
+                    line2 = line[firstSpace:]
+                    if line2 not in masterSet:
+                        masterSet.append(line2)
+                    else:
+                        dupe = True
+
                 current = current + 1
                 if current == 2:
                     api = line.split(' ')[1]
@@ -223,8 +232,7 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
                     cleanedObj['sourceLineNumber'] = current
                     cleanedObj['api'] = apiKeys[api]
                     cleanedObj['requestDate'] = getDate(pathObj['key'])
-                    if json.dumps(collections.OrderedDict(sorted(cleanedObj.items()))) not in masterSet:
-                        masterSet.append(json.dumps(collections.OrderedDict(sorted(cleanedObj.items()))))
+                    if not dupe:
                         outFile.write(json.dumps(cleanedObj)+'\n')
             inFile.close()
             try:
@@ -292,7 +300,7 @@ def main(argv):
                 sendToQueue(metricsQueue, json.dumps(results), logger)
                 messages[0].delete()
             else:
-                logger.info('Error process file {0} - did not pass gzip test'.format(json.loads(messages[0].body))
+                logger.info('Error process file {0} - did not pass gzip test'.format(json.loads(messages[0].body)))
                 
 
 
