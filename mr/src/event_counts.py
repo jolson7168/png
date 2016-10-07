@@ -23,33 +23,9 @@ class MRCountEvents(MRJob):
     eventList = []
     apiKeys = {}
 
-    def decode_data(self, line):
-        try:
-            retval = base64.b64decode(urllib.unquote(line).decode('utf8'))
-            return retval
-        except Exception as e:
-            msg = 'Problem decoding {0} from base64'.format(line)
-            raise TypeError(msg)
-
-    def deconstruct_filename(self, path):
-        retval={}
-        retval['date'] = (path.split("_")[0])[-8:]
-        retval['api'] = (path.split("_")[1]).split(".")[0]
-        return retval
-
-    def get_between(self, aline, delim1, delim2):
-        if (delim1 in aline) and (delim2 in aline):        
-            start = aline.index( delim1 ) + len( delim1 )
-            end = aline.index( delim2, start )
-            return aline[start:end]
-        else:
-            msg = 'Expecting delimiters: {0} and {1} in line: {2}'.format(delim1, delim2, aline)
-            raise KeyError(msg)
-
     def get_json(self, data):
         try:
-            decoded = self.decode_data(data)
-            retval = json.loads(decoded)          
+            retval = json.loads(data)          
             return retval
         except TypeError as e:
             raise TypeError(e)
@@ -68,38 +44,37 @@ class MRCountEvents(MRJob):
         event = 'None'
         dataDate = 'None'
         key = ('None', 'None', 'None', 'None')
-        try:
-            if line[0] != '#':
-                if '&s=' in line:
-                    id1 = self.get_between(line, '&s=', '&')
-                elif ' s=' in line:
-                    id1 = self.get_between(line, ' s=', '&')
-                if id1[:3] == '109':
-                    id1 = id1[3:]
+        try:         
+            dataObj = self.get_json(line)
 
-                if '&n=' in line:
-                    event = self.get_between(line, '&n=', '&')
-                elif ' n=' in line:
-                    event = self.get_between(line, ' n=', '&')
-                dataDateStamp = datetime.strptime(self.deconstruct_filename(jobconf_from_env('mapreduce.map.input.file'))['date'], "%Y%m%d")
-                dataDate = datetime.strftime(dataDateStamp, "%Y-%m-%d")
-                api = self.deconstruct_filename(jobconf_from_env('mapreduce.map.input.file'))['api']
+            id1 = 'None'
+            if 'id' in dataObj:
+                id1 = dataObj['id']
+            
+            event = 'None'
+            if 'event' in dataObj:
+                event = dataObj['event']
 
-                timeval = ''
-                if '&ts=' in line:
-                    timeval = self.get_between(line, '&ts=', '&')
-                elif ' ts=' in line:
-                    timeval = self.get_between(line, ' ts=', '&')
-                if len(timeval) > 0:
-                    now = int(timeval)
-                    if len(timeval) > 10:
-                        nowTimeStamp = datetime.fromtimestamp(now/1000)
-                        micro = True
-                    else:
-                        nowTimeStamp = datetime.fromtimestamp(now)
+            dataDateStamp = datetime.strptime(self.deconstruct_filename(jobconf_from_env('mapreduce.map.input.file'))['date'], "%Y%m%d")
+            dataDate = datetime.strftime(dataDateStamp, "%Y-%m-%d")
 
-                    if (nowTimeStamp > (dataDateStamp - timedelta(hours=1))) and (nowTimeStamp< (dataDateStamp + timedelta(days=1))):
-                        key = (dataDate, api, int(id1), event)
+            api = 'None'
+            if 'api' in dataObj:
+                api = dataObj['api']
+
+            timeval = ''
+            if 'serverTime' in dataObj:
+                timeval = dataObj['serverTime']
+            if len(timeval) > 0:
+                now = int(timeval)
+                if len(timeval) > 10:
+                    nowTimeStamp = datetime.fromtimestamp(now/1000)
+                    micro = True
+                else:
+                    nowTimeStamp = datetime.fromtimestamp(now)
+
+                if (nowTimeStamp > (dataDateStamp - timedelta(hours=1))) and (nowTimeStamp< (dataDateStamp + timedelta(days=1))):
+                    key = (dataDate, api, id1, event)
 
         except KeyError as e:
             sys.stderr.write('ERROR: Missing expected key: {0} Line: {1} File: {2}{3}'.format(e, self.currentLine,jobconf_from_env('mapreduce.map.input.file'),'\n'))
