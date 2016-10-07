@@ -30,7 +30,7 @@ class MRCountEvents(MRJob):
         except TypeError as e:
             raise TypeError(e)
         except ValueError as e:
-            msg = 'Problem serializing JSON: {0}'.format(decoded)
+            msg = 'Problem serializing JSON: {0}'.format(data)
             raise ValueError(msg)
 
     def init_get_events(self):
@@ -55,19 +55,22 @@ class MRCountEvents(MRJob):
             if 'event' in dataObj:
                 event = dataObj['event']
 
-            dataDateStamp = datetime.strptime(self.deconstruct_filename(jobconf_from_env('mapreduce.map.input.file'))['date'], "%Y%m%d")
-            dataDate = datetime.strftime(dataDateStamp, "%Y-%m-%d")
+            if 'requestDate' in dataObj:
+                dataDateStamp = datetime.strptime(dataObj['requestDate'], "%Y%m%d")
+                dataDate = datetime.strftime(dataDateStamp, "%Y-%m-%d")
+            else:
+                dataDate = 'None'
 
             api = 'None'
             if 'api' in dataObj:
                 api = dataObj['api']
 
-            timeval = ''
+            timeval = 0
             if 'serverTime' in dataObj:
                 timeval = dataObj['serverTime']
-            if len(timeval) > 0:
+            if timeval > 0:
                 now = int(timeval)
-                if len(timeval) > 10:
+                if len(str(timeval)) > 10:
                     nowTimeStamp = datetime.fromtimestamp(now/1000)
                     micro = True
                 else:

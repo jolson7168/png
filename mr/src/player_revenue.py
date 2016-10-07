@@ -41,7 +41,7 @@ class MRCountEvents(MRJob):
         elif 'messageType' in dataObj:
             if dataObj['messageType'] == 'mtu':
                 if 'api' in dataObj:
-                    if 'api' in ['android','ios']: 
+                    if dataObj['api'] in ['android','ios']: 
                         stat = 'mtu'
 
         if stat in ['mtu', 'purchase']:
