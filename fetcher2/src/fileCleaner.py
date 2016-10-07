@@ -178,6 +178,27 @@ def cleanLine(line, timeStart, fileName, lineNo):
         if ts:
             retval['ts1'] = int(ts)
 
+        v = None
+        if '&v=' in line:
+            v = get_between(line, '&v=', '&')
+        elif ' v=' in line:
+            v = get_between(line, ' v=', '&')
+        else:
+            pass
+        if v:
+            retval['v'] = v
+
+        kt_v = None
+        if '&kt_v=' in line:
+            kt_v = get_between(line, '&kt_v=', '&')
+        elif ' kt_v=' in line:
+            kt_v = get_between(line, ' kt_v=', '&')
+        else:
+            pass
+        if kt_v:
+            retval['kt_v'] = kt_v
+
+
         scheme = None
         if 'scheme=' in line:
             scheme = get_between(line, 'scheme=', 'EOL').replace('\n','')
