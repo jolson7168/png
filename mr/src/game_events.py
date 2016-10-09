@@ -53,19 +53,22 @@ class MRCountEvents(MRJob):
                         id1 = dataObj['id']
                     row.append(id1) 
 
-
-                    micro = False
-                    nowSting = ''
-                    if 'serverTime' in dataObj:
-                        timeval = dataObj['serverTime']
-                        now = int(timeval)
-                        if len(str(timeval)) > 10:
-                            nowTimeStamp = datetime.fromtimestamp(now/1000)
-                            micro = True
-                        else:
-                            nowTimeStamp = datetime.fromtimestamp(now)
-                    nowString = nowTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
-                    row.append(nowString)
+                    try:
+                        micro = False
+                        nowSting = ''
+                        if 'serverTime' in dataObj:
+                            timeval = dataObj['serverTime']
+                            now = int(timeval)
+                            if len(str(timeval)) > 10:
+                                nowTimeStamp = datetime.fromtimestamp(now/1000)
+                                micro = True
+                            else:
+                                nowTimeStamp = datetime.fromtimestamp(now)
+                        nowString = nowTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
+                        row.append(nowString)
+                    except Exception as e:
+                        msg = 'Problem converting serverTime: {0}'.format(e)
+                        raise TypeError(msg)
 
                     api = 'None'
                     if 'api' in dataObj:
@@ -87,23 +90,32 @@ class MRCountEvents(MRJob):
 
                     row.append(nowString)
                     
-                    startedString = ""
-                    if 'ts' in dataObj:
-                        started = int(dataObj['ts'])
-                        startedTimeStamp = datetime.fromtimestamp(started/1000)
-                        startedString = startedTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
-                    row.append(startedString)
+                    try:
+                        startedString = ""
+                        if 'ts' in dataObj:
+                            started = int(dataObj['ts'])
+                            startedTimeStamp = datetime.fromtimestamp(started/1000)
+                            startedString = startedTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
+                        row.append(startedString)
+                    except Exception as e:
+                        msg = 'Problem converting ts: {0}'.format(e)
+                        raise TypeError(msg)
 
-                    tslsString = ""
-                    if 'timeSinceLastSpin' in dataObj:
-                        if isinstance(dataObj['timeSinceLastSpin'], (int, long)):
-                            tsls = int(dataObj['timeSinceLastSpin'])
-                            if micro:
-                                tslsTimeStamp = datetime.fromtimestamp((started-tsls)/1000)
-                            else:
-                                tslsTimeStamp = datetime.fromtimestamp((started-tsls))
-                            tslsString = tslsTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
-                    row.append(tslsString)
+                    try:
+                        tslsString = ""
+                        if 'timeSinceLastSpin' in dataObj:
+                            if isinstance(dataObj['timeSinceLastSpin'], (int, long)):
+                                tsls = int(dataObj['timeSinceLastSpin'])
+                                if micro:
+                                    tslsTimeStamp = datetime.fromtimestamp((started-tsls)/1000)
+                                else:
+                                    tslsTimeStamp = datetime.fromtimestamp((started-tsls))
+                                tslsString = tslsTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
+                        row.append(tslsString)
+                    except Exception as e:
+                        msg = 'Problem converting timeSinceLastSpin: {0}'.format(e)
+                        raise TypeError(msg)
+
 
                     bet = ""
                     if 'bet' in dataObj:
@@ -166,17 +178,21 @@ class MRCountEvents(MRJob):
                     if 'gameLevel' in dataObj:
                         gameLevel = int(dataObj['gameLevel'])
                     row.append(gameLevel)
-
-                    ettb = ""
-                    if 'timeTillBonus' in dataObj:
-                        ettb = int(dataObj['timeTillBonus'])
-                        try:
-                            ettbTimeStamp = datetime.fromtimestamp((ettb+now)/1000)
-                            ettb = ettbTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
-                        except ValueError as e:
-                            pass                        
-                            ettb = ""
-                    row.append(ettb)
+                
+                    try:
+                        ettb = ""
+                        if 'timeTillBonus' in dataObj:
+                            ettb = int(dataObj['timeTillBonus'])
+                            try:
+                                ettbTimeStamp = datetime.fromtimestamp((ettb+now)/1000)
+                                ettb = ettbTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
+                            except ValueError as e:
+                                pass                        
+                                ettb = ""
+                        row.append(ettb)
+                    except Exception as e:
+                        msg = 'Problem converting timeTillBonus: {0}'.format(e)
+                        raise TypeError(msg)
 
 
                     tz=""
