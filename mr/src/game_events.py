@@ -106,15 +106,16 @@ class MRCountEvents(MRJob):
                         if 'timeSinceLastSpin' in dataObj:
                             if isinstance(dataObj['timeSinceLastSpin'], (int, long)):
                                 tsls = int(dataObj['timeSinceLastSpin'])
-                                if micro:
-                                    tslsTimeStamp = datetime.fromtimestamp((started-tsls)/1000)
-                                else:
-                                    tslsTimeStamp = datetime.fromtimestamp((started-tsls))
+                                #if micro:
+                                tslsTimeStamp = datetime.fromtimestamp((started-tsls)/1000)
+                                #else:
+                                #    tslsTimeStamp = datetime.fromtimestamp((started-tsls))
                                 tslsString = tslsTimeStamp.strftime("%Y-%m-%d %H:%M:%S")
                         row.append(tslsString)
                     except Exception as e:
-                        msg = 'Problem converting timeSinceLastSpin: {0}'.format(e)
-                        raise TypeError(msg)
+                        pass
+                        #msg = 'Problem converting timeSinceLastSpin: {0}'.format(e)
+                        #raise TypeError(msg)
 
 
                     bet = ""
