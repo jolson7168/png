@@ -40,7 +40,7 @@ class MRCountEvents(MRJob):
             stat = dataObj['event']
 
         tester = ''
-        if 'isTester' in dataObj
+        if 'isTester' in dataObj:
             tester = dataObj['isTester']
        
         if tester != 'True':
