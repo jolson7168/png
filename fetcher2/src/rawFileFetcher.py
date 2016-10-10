@@ -49,7 +49,8 @@ def getCmdLineParser():
 # How about some logging here?? And beef this up....
 def dumpFileS3(aFile, conn, bucket, logger):
     try:
-        keyName = aFile.replace(cfg.get('store', 'temp')+'/','')
+        folder = aFile.split('_')[2]
+        keyName = aFile.replace(cfg.get('store', 'temp'),folder)
         conn.Object(bucket, keyName).load()
         msg = "   Key {0} already exists in bucket {1}.".format(keyName, bucket)
         logger.error(msg)
