@@ -124,7 +124,8 @@ def main(argv):
                 tempLoc = cfg.get('store','temp')
                 fileDate = pathObj['key'].split('_')[2][:8]
                 targetName = tempLoc +'/'+fileDate+'.gz'
-                thisFileName = tempLoc+'/'+pathObj['key']
+                tempKey = pathObj['key'].replace(pathObj['key'][:pathObj['key'].find('/')+1], '')
+                thisFileName = tempLoc+'/'+tempKey
                 s3_client.download_file(pathObj['bucket'], pathObj['key'], thisFileName)
                 with open(targetName, 'ab') as outfile:
                     valid = True
