@@ -123,7 +123,7 @@ def getURL(logger, url, s3, bucketName, rawFileQueue):
         written = True
 
         dumpFileS3(fileName, s3, bucketName, logger)
-        val = {'bucket': bucketName, 'key': fileName.replace(cfg.get('store', 'temp')+'/','')}
+        val = {'bucket': bucketName, 'key': fileName.replace(cfg.get('store', 'temp'),fileName.split('_')[2])}
         sendToQueue(rawFileQueue, json.dumps(val), logger)
         fileSize = 0
         compressedFile.seek(0, os.SEEK_END)
