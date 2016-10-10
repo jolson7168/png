@@ -227,7 +227,8 @@ def getDate(fname):
 def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc, apiKeys):
 
     masterSet = []
-    tempFileName = tempLoc+'/'+pathObj['key']
+    tempKey = pathObj['key'].replace(pathObj['key'][:pathObj['key'].find('/')+1], '')
+    tempFileName = tempLoc+'/'+tempKey
     s3_client.download_file(pathObj['bucket'], pathObj['key'], tempFileName)
     with gzip.open(tempFileName.replace('.gz','_cleaned.gz'), 'wb') as outFile:
         with gzip.open(tempFileName, 'rb') as inFile:
