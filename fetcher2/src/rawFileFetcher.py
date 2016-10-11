@@ -49,7 +49,7 @@ def getCmdLineParser():
 # How about some logging here?? And beef this up....
 def dumpFileS3(aFile, conn, bucket, logger):
     try:
-        folder = aFile.split('_')[2]
+        folder = aFile.split('_')[2][:8]
         keyName = aFile.replace(cfg.get('store', 'temp'),folder)
         conn.Object(bucket, keyName).load()
         msg = "   Key {0} already exists in bucket {1}.".format(keyName, bucket)
@@ -123,7 +123,7 @@ def getURL(logger, url, s3, bucketName, rawFileQueue):
         written = True
 
         dumpFileS3(fileName, s3, bucketName, logger)
-        val = {'bucket': bucketName, 'key': fileName.replace(cfg.get('store', 'temp'),fileName.split('_')[2])}
+        val = {'bucket': bucketName, 'key': fileName.replace(cfg.get('store', 'temp'),fileName.split('_')[2][:8])}
         sendToQueue(rawFileQueue, json.dumps(val), logger)
         fileSize = 0
         compressedFile.seek(0, os.SEEK_END)
