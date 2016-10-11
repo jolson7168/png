@@ -50,7 +50,7 @@ def getCmdLineParser():
 # How about some logging here?? And beef this up....
 def dumpFileS3(aFile, conn, bucket, logger):
     try:
-        folder = aFile.split('_')[2]
+        folder = aFile.split('_')[2][:8]
         keyName = aFile.replace(cfg.get('store', 'temp'),folder)
         conn.Object(bucket, keyName).load()
         msg = "   Key {0} already exists in bucket {1}.".format(keyName, bucket)
@@ -353,7 +353,7 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
         pass
 
     if valid:
-        dumpFileS3(tempFileName.replace('.gz','_cleaned.gz').replace(tempLoc,tempFileName.split('_')[2][:8], s3, targetBucket, logger)
+        dumpFileS3(tempFileName.replace('.gz','_cleaned.gz'), s3, targetBucket, logger)
         targetObj = {"bucket": targetBucket,"key": tempFileName.replace('.gz','_cleaned.gz').replace(tempLoc,tempFileName.split('_')[2][:8])}
         sendToQueue(targetQueue, json.dumps(targetObj), logger)
     return valid
