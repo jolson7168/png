@@ -295,6 +295,27 @@ class MRCountEvents(MRJob):
                 row.append(jobconf_from_env('mapreduce.map.input.file'))
                 row.append(self.currentLine)
 
+                fileName = ''
+                if 'upsightSource' in dataObj:
+                    fileName = dataObj['upsightSource']
+                row.append(fileName)
+
+                lineNo = ''
+                if 'sourceLineNumber' in dataObj:
+                    lineNo = dataObj['sourceLineNumber']
+                row.append(lineNo)
+
+                dupeFileName = ''
+                if 'dupeFileName' in dataObj:
+                    dupeFileName = dataObj['dupeFileName']
+                row.append(dupeFileName)
+
+                dupeLineNo = ''
+                if 'dupeLineNo' in dataObj:
+                    dupeLineNo = dataObj['dupeLineNo']
+                row.append(dupeLineNo)
+
+
                 yield None, row
 
             except KeyError as e:
