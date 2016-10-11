@@ -93,6 +93,42 @@ def decode_data(line):
         msg = 'Problem decoding {0} from base64'.format(line)
         raise TypeError(msg)
 
+def getVals(line):
+    try:
+        offset = int(line.split(' ')[0])
+    except Exception as e:
+        pass
+        offset = 0
+    if 'ts' in dataObj:
+        dataTS = int(dataObj['ts'])
+    else:
+        dataTS = 0
+    if '&ts=' in line:                                      
+        ts = int(get_between(line, '&ts=', '&'))                                               
+    elif ' ts=' in line:
+        ts = int(get_between(line, ' ts=', '&'))
+    else:
+        ts = 0
+    return [offset, dataTS, ts]
+
+def isDupe(existing, candidate):
+
+    if abs((existing[0] - candidate[0]) < int(cfg.get('dupes', 'offsetthreshold'))) or abs((existing[1] - candidate[1]) < int(cfg.get('dupes', 'ts1threshold'))) or abs((existing[2] - candidate[2]) < int(cfg.get('dupes', 'ts2threshold'))):
+        return existing[3], existing[4]
+    else:    
+        return None, 0
+
+def handleDupe(line, fname, lineNo):
+    retval = ''
+    replaceStr = '&dupeFilename={0}&dupeLineNo={1}'.format(fname, lineNo)
+    if '&s=' in line:
+        retval = line.replace('&s=', '{0}{1}'.format(replaceStr,'&s='))
+    elif '&ts=' in line:
+        retval = line.replace('&ts=', '{0}{1}'.format(replaceStr,'&ts='))
+
+    return retval
+
+
 def cleanLine(line, timeStart, fileName, lineNo):
     retval = {}
     try:
@@ -199,6 +235,26 @@ def cleanLine(line, timeStart, fileName, lineNo):
         if kt_v:
             retval['kt_v'] = kt_v
 
+        dupeFileName = None
+        if '&dupeFileName=' in line:
+            dupeFileName = get_between(line, '&dupeFileName=', '&')
+        elif ' dupeFileName=' in line:
+            dupeFileName = get_between(line, ' dupeFileName=', '&')
+        else:
+            pass
+        if dupeFileName:
+            retval['dupeFileName'] = dupeFileName
+
+        dupeLineNo = None
+        if '&dupeLineNo=' in line:
+            dupeLineNo = get_between(line, '&dupeLineNo=', '&')
+        elif ' dupeLineNo=' in line:
+            dupeLineNo = get_between(line, ' dupeLineNo=', '&')
+        else:
+            pass
+        if dupeLineNo:
+            retval['dupeLineNo'] = dupeLineNO
+
 
         scheme = None
         if 'scheme=' in line:
@@ -233,16 +289,8 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
     with gzip.open(tempFileName.replace('.gz','_cleaned.gz'), 'wb') as outFile:
         with gzip.open(tempFileName, 'rb') as inFile:
             current = 0
-            for line in inFile:
-                dupe = False
-                if 's=' in line:
-                    firstSpace = line.find(' ')
-                    line2 = line[firstSpace:]
-                    if line2 not in masterSet:
-                        masterSet.append(line2)
-                    else:
-                        dupe = True
-
+            mtu_masterSet = {}
+            for line in inFile:                
                 current = current + 1
                 if current == 2:
                     api = line.split(' ')[1]
@@ -250,13 +298,41 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
                 elif line[0] == '#':
                     pass
                 else:
+                    # De dupe the mtu revenue
+                    if apiKeys[api] in ['android', 'ios']:
+                        s = ''
+                        if ' s=' in line:
+                            s = get_between(line, ' s=', '&')                    
+                        elif '&s=' in line:
+                            s = get_between(line, '&s=', '&')                  
+                        if len(s) > 1:
+                            data = get_between(line, 'data=', '&')
+                            decoded = decode_data(data)
+                            tempLine = line.replace(data, decoded)
+                            dupe = False
+                            thisKey = getVals(tempLine)
+                            thisKey.append(pathObj['bucket']+"/"+pathObj['key'])
+                            thisKey.append(current)
+                            if s in mtu_masterSet:
+                                for eachTransaction in mtu_masterSet[s]:
+                                    origFilename, origLine = isDupe(eachTransaction, thisKey)
+                                    if origLine > 0:
+                                        dupe = True
+                                        break
+                                if dupe:
+                                    line = handleDupe(line, origFilename, origLine)                            
+                                else:
+                                    mtu_masterSet[s].append(thisKey)
+                            else:
+                                mtu_masterSet[s]=[]
+                                mtu_masterSet[s].append(thisKey)
                     cleanedObj = cleanLine(line, offset, pathObj['key'], current)
                     cleanedObj['upsightSource'] = pathObj['key']
                     cleanedObj['sourceLineNumber'] = current
                     cleanedObj['api'] = apiKeys[api]
                     cleanedObj['requestDate'] = getDate(pathObj['key'])
-                    if not dupe:
-                        outFile.write(json.dumps(cleanedObj)+'\n')
+                    outFile.write(json.dumps(cleanedObj)+'\n')
+
             inFile.close()
             try:
                 os.remove(tempFileName)
