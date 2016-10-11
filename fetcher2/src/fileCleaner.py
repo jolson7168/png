@@ -353,7 +353,7 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
         pass
 
     if valid:
-        dumpFileS3(tempFileName.replace('.gz','_cleaned.gz'), s3, targetBucket, logger)
+        dumpFileS3(tempFileName.replace('.gz','_cleaned.gz').replace(tempLoc,tempFileName.split('_')[2][:8], s3, targetBucket, logger)
         targetObj = {"bucket": targetBucket,"key": tempFileName.replace('.gz','_cleaned.gz').replace(tempLoc,tempFileName.split('_')[2][:8])}
         sendToQueue(targetQueue, json.dumps(targetObj), logger)
     return valid
