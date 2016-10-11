@@ -93,7 +93,7 @@ def decode_data(line):
         msg = 'Problem decoding {0} from base64'.format(line)
         raise TypeError(msg)
 
-def getVals(line):
+def getVals(line, dataObj):
     try:
         offset = int(line.split(' ')[0])
     except Exception as e:
@@ -253,7 +253,7 @@ def cleanLine(line, timeStart, fileName, lineNo):
         else:
             pass
         if dupeLineNo:
-            retval['dupeLineNo'] = dupeLineNO
+            retval['dupeLineNo'] = dupeLineNo
 
 
         scheme = None
@@ -298,34 +298,35 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
                 elif line[0] == '#':
                     pass
                 else:
-                    # De dupe the mtu revenue
                     if apiKeys[api] in ['android', 'ios']:
-                        s = ''
-                        if ' s=' in line:
-                            s = get_between(line, ' s=', '&')                    
-                        elif '&s=' in line:
-                            s = get_between(line, '&s=', '&')                  
-                        if len(s) > 1:
-                            data = get_between(line, 'data=', '&')
-                            decoded = decode_data(data)
-                            tempLine = line.replace(data, decoded)
-                            dupe = False
-                            thisKey = getVals(tempLine)
-                            thisKey.append(pathObj['bucket']+"/"+pathObj['key'])
-                            thisKey.append(current)
-                            if s in mtu_masterSet:
-                                for eachTransaction in mtu_masterSet[s]:
-                                    origFilename, origLine = isDupe(eachTransaction, thisKey)
-                                    if origLine > 0:
-                                        dupe = True
-                                        break
-                                if dupe:
-                                    line = handleDupe(line, origFilename, origLine)                            
+                        if ' mtu ' in line:
+                            s = ''
+                            if ' s=' in line:
+                                s = get_between(line, ' s=', '&')                    
+                            elif '&s=' in line:
+                                s = get_between(line, '&s=', '&')                  
+                            if len(s) > 1:
+                                data = get_between(line, 'data=', '&')
+                                decoded = decode_data(data)
+                                tempLine = line.replace(data, decoded)
+                                dataObj = json.loads(decoded)
+                                dupe = False
+                                thisKey = getVals(tempLine, dataObj)
+                                thisKey.append(pathObj['bucket']+"/"+pathObj['key'])
+                                thisKey.append(current)
+                                if s in mtu_masterSet:
+                                    for eachTransaction in mtu_masterSet[s]:
+                                        origFilename, origLine = isDupe(eachTransaction, thisKey)
+                                        if origLine > 0:
+                                            dupe = True
+                                            break
+                                    if dupe:
+                                        line = handleDupe(line, origFilename, origLine)                            
+                                    else:
+                                        mtu_masterSet[s].append(thisKey)
                                 else:
+                                    mtu_masterSet[s]=[]
                                     mtu_masterSet[s].append(thisKey)
-                            else:
-                                mtu_masterSet[s]=[]
-                                mtu_masterSet[s].append(thisKey)
                     cleanedObj = cleanLine(line, offset, pathObj['key'], current)
                     cleanedObj['upsightSource'] = pathObj['key']
                     cleanedObj['sourceLineNumber'] = current
