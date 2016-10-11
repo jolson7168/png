@@ -120,7 +120,7 @@ def isDupe(existing, candidate):
 
 def handleDupe(line, fname, lineNo):
     retval = ''
-    replaceStr = '&dupeFilename={0}&dupeLineNo={1}'.format(fname, lineNo)
+    replaceStr = '&dupeFileName={0}&dupeLineNo={1}'.format(fname, lineNo)
     if '&s=' in line:
         retval = line.replace('&s=', '{0}{1}'.format(replaceStr,'&s='))
     elif '&ts=' in line:
