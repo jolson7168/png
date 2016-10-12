@@ -112,8 +112,13 @@ def getVals(line, dataObj):
     return [offset, dataTS, ts]
 
 def isDupe(existing, candidate):
+#offsetthreshold = 10
+#ts1threshold = 1000     
+#ts2threshold = 10        
 
-    if abs((existing[0] - candidate[0]) < int(cfg.get('dupes', 'offsetthreshold'))) or abs((existing[1] - candidate[1]) < int(cfg.get('dupes', 'ts1threshold'))) or abs((existing[2] - candidate[2]) < int(cfg.get('dupes', 'ts2threshold'))):
+
+    #if abs((existing[0] - candidate[0]) < int(cfg.get('dupes', 'offsetthreshold'))) or abs((existing[1] - candidate[1]) < int(cfg.get('dupes', 'ts1threshold'))) or abs((existing[2] - candidate[2]) < int(cfg.get('dupes', 'ts2threshold'))):
+    if ((existing[0] - candidate[0]) == 0) or ((existing[1] - candidate[1]) == 0):
         return existing[3], existing[4]
     else:    
         return None, 0
