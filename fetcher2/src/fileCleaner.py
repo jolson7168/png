@@ -93,46 +93,6 @@ def decode_data(line):
         msg = 'Problem decoding {0} from base64'.format(line)
         raise TypeError(msg)
 
-def getVals(line, dataObj):
-    try:
-        offset = int(line.split(' ')[0])
-    except Exception as e:
-        pass
-        offset = 0
-    if 'ts' in dataObj:
-        dataTS = int(dataObj['ts'])
-    else:
-        dataTS = 0
-    if '&ts=' in line:                                      
-        ts = int(get_between(line, '&ts=', '&'))                                               
-    elif ' ts=' in line:
-        ts = int(get_between(line, ' ts=', '&'))
-    else:
-        ts = 0
-    return [offset, dataTS, ts]
-
-def isDupe(existing, candidate):
-#offsetthreshold = 10
-#ts1threshold = 1000     
-#ts2threshold = 10        
-
-
-    #if abs((existing[0] - candidate[0]) < int(cfg.get('dupes', 'offsetthreshold'))) or abs((existing[1] - candidate[1]) < int(cfg.get('dupes', 'ts1threshold'))) or abs((existing[2] - candidate[2]) < int(cfg.get('dupes', 'ts2threshold'))):
-    if ((existing[0] - candidate[0]) == 0) or ((existing[1] - candidate[1]) == 0):
-        return existing[3], existing[4]
-    else:    
-        return None, 0
-
-def handleDupe(line, fname, lineNo):
-    retval = ''
-    replaceStr = '&dupeFileName={0}&dupeLineNo={1}'.format(fname, lineNo)
-    if '&s=' in line:
-        retval = line.replace('&s=', '{0}{1}'.format(replaceStr,'&s='))
-    elif '&ts=' in line:
-        retval = line.replace('&ts=', '{0}{1}'.format(replaceStr,'&ts='))
-
-    return retval
-
 
 def cleanLine(line, timeStart, fileName, lineNo):
     retval = {}
@@ -303,35 +263,6 @@ def cleanFile(logger, s3_client, s3, pathObj, targetBucket, targetQueue, tempLoc
                 elif line[0] == '#':
                     pass
                 else:
-                    if apiKeys[api] in ['android', 'ios']:
-                        if ' mtu ' in line:
-                            s = ''
-                            if ' s=' in line:
-                                s = get_between(line, ' s=', '&')                    
-                            elif '&s=' in line:
-                                s = get_between(line, '&s=', '&')                  
-                            if len(s) > 1:
-                                data = get_between(line, 'data=', '&')
-                                decoded = decode_data(data)
-                                tempLine = line.replace(data, decoded)
-                                dataObj = json.loads(decoded)
-                                dupe = False
-                                thisKey = getVals(tempLine, dataObj)
-                                thisKey.append(pathObj['bucket']+"/"+pathObj['key'])
-                                thisKey.append(current)
-                                if s in mtu_masterSet:
-                                    for eachTransaction in mtu_masterSet[s]:
-                                        origFilename, origLine = isDupe(eachTransaction, thisKey)
-                                        if origLine > 0:
-                                            dupe = True
-                                            break
-                                    if dupe:
-                                        line = handleDupe(line, origFilename, origLine)                            
-                                    else:
-                                        mtu_masterSet[s].append(thisKey)
-                                else:
-                                    mtu_masterSet[s]=[]
-                                    mtu_masterSet[s].append(thisKey)
                     cleanedObj = cleanLine(line, offset, pathObj['key'], current)
                     cleanedObj['upsightSource'] = pathObj['key']
                     cleanedObj['sourceLineNumber'] = current
