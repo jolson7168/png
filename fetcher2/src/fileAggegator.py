@@ -68,6 +68,11 @@ def sendToQueue(queueName, message, logger):
 
 def getVals(dataObj):
 
+    serverTimeOffset = 0
+    if 'serverTimeOffset' in dataObj:
+        serverTimeOffset = dataObj['serverTimeOffset']
+
+
     serverTime = 0
     if 'serverTime' in dataObj:
         serverTime = dataObj['serverTime']
@@ -91,7 +96,7 @@ def getVals(dataObj):
         sourceLineNumber = dataObj['sourceLineNumber']
         
 
-    return [serverTime, ts, ts1, upsightSource, sourceLineNumber]
+    return [serverTimeOffset, serverTime, ts, ts1, upsightSource, sourceLineNumber]
 
 def isDupe(existing, candidate):
 #offsetthreshold = 10
@@ -100,20 +105,10 @@ def isDupe(existing, candidate):
 
 
     #if abs((existing[0] - candidate[0]) < int(cfg.get('dupes', 'offsetthreshold'))) or abs((existing[1] - candidate[1]) < int(cfg.get('dupes', 'ts1threshold'))) or abs((existing[2] - candidate[2]) < int(cfg.get('dupes', 'ts2threshold'))):
-    if ((existing[0] - candidate[0]) == 0) or ((existing[1] - candidate[1]) == 0):
-        return existing[3], existing[4]
+    if ((existing[0] - candidate[0]) == 0) or ((existing[2] - candidate[2]) == 0):
+        return existing[4], existing[5]
     else:    
         return None, 0
-
-def handleDupe(line, fname, lineNo):
-    retval = ''
-    replaceStr = '&dupeFileName={0}&dupeLineNo={1}'.format(fname, lineNo)
-    if '&s=' in line:
-        retval = line.replace('&s=', '{0}{1}'.format(replaceStr,'&s='))
-    elif '&ts=' in line:
-        retval = line.replace('&ts=', '{0}{1}'.format(replaceStr,'&ts='))
-
-    return retval
 
 def rezipFile(aFile, logger):
     mtu_masterSet = {}
