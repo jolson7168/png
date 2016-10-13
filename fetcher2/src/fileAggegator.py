@@ -72,7 +72,6 @@ def getVals(dataObj):
     if 'serverTimeOffset' in dataObj:
         serverTimeOffset = dataObj['serverTimeOffset']
 
-
     serverTime = 0
     if 'serverTime' in dataObj:
         serverTime = dataObj['serverTime']
@@ -80,7 +79,7 @@ def getVals(dataObj):
     # Inside data one
     ts = 0
     if 'ts' in dataObj:
-        ts = dataObj['ts']
+        ts = int(dataObj['ts'])
 
     # Outside one
     ts1 = 0
@@ -94,8 +93,7 @@ def getVals(dataObj):
     sourceLineNumber = 0
     if 'sourceLineNumber' in dataObj:
         sourceLineNumber = dataObj['sourceLineNumber']
-        
-
+       
     return [serverTimeOffset, serverTime, ts, ts1, upsightSource, sourceLineNumber]
 
 def isDupe(existing, candidate):
