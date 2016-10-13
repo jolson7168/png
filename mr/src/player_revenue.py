@@ -44,7 +44,7 @@ class MRCountEvents(MRJob):
                     if dataObj['api'] in ['android','ios']: 
                         stat = 'mtu'
 
-        if stat in ['mtu', 'purchase']:
+        if stat in ['mtu', 'purchase','tmpunlock_with_money_success']:
             try:
                 row = [] 
 
