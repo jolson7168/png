@@ -123,7 +123,7 @@ def rezipFile(aFile, logger):
                                 dupe = False
                                 thisKey = getVals(dataObj)
                                 if dataObj["id"] in mtu_masterSet:
-                                    for eachTransaction in mtu_masterSet[s]:
+                                    for eachTransaction in mtu_masterSet[dataObj["id"]]:
                                         origFilename, origLine = isDupe(eachTransaction, thisKey)
                                         if origLine > 0:
                                             dupe = True
