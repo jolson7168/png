@@ -122,7 +122,7 @@ def rezipFile(aFile, logger):
                                 thisKey = getVals(dataObj)
                                 if dataObj["id"] in mtu_masterSet:
                                     for eachTransaction in mtu_masterSet[dataObj["id"]]:
-                                        origFilename, origLine = isDupe(eachTransaction, thisKey)
+                                        origFileName, origLine = isDupe(eachTransaction, thisKey)
                                         if origLine > 0:
                                             dupe = True
                                             break
