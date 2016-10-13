@@ -66,11 +66,82 @@ def sendToQueue(queueName, message, logger):
     msg = 'Wrote to queue {0}. Response MessageID: {1}. Time: {2}'.format(queueName, response.get('MessageId'), requestTime)
     logger.info(msg)
 
+def getVals(dataObj):
+
+    serverTime = 0
+    if 'serverTime' in dataObj:
+        serverTime = dataObj['serverTime']
+
+    # Inside data one
+    ts = 0
+    if 'ts' in dataObj:
+        ts = dataObj['ts']
+
+    # Outside one
+    ts1 = 0
+    if 'ts1' in dataObj:                                      
+        ts1 = dataObj['ts1']
+
+    upsightSource = ''
+    if 'upsightSource' in dataObj:
+        upsightSource = dataObj['upsightSource']      
+
+    sourceLineNumber = 0
+    if 'sourceLineNumber' in dataObj:
+        sourceLineNumber = dataObj['sourceLineNumber']
+        
+
+    return [serverTime, ts, ts1, upsightSource, sourceLineNumber]
+
+def isDupe(existing, candidate):
+#offsetthreshold = 10
+#ts1threshold = 1000     
+#ts2threshold = 10        
+
+
+    #if abs((existing[0] - candidate[0]) < int(cfg.get('dupes', 'offsetthreshold'))) or abs((existing[1] - candidate[1]) < int(cfg.get('dupes', 'ts1threshold'))) or abs((existing[2] - candidate[2]) < int(cfg.get('dupes', 'ts2threshold'))):
+    if ((existing[1] - candidate[1]) == 0):
+        return existing[3], existing[4]
+    else:    
+        return None, 0
+
+def handleDupe(line, fname, lineNo):
+    retval = ''
+    replaceStr = '&dupeFileName={0}&dupeLineNo={1}'.format(fname, lineNo)
+    if '&s=' in line:
+        retval = line.replace('&s=', '{0}{1}'.format(replaceStr,'&s='))
+    elif '&ts=' in line:
+        retval = line.replace('&ts=', '{0}{1}'.format(replaceStr,'&ts='))
+
+    return retval
+
 def rezipFile(aFile, logger):
+    mtu_masterSet = {}
     try:
         with gzip.open(aFile, 'rb') as infile:
             with open(aFile[:-3], 'wb') as outfile:
                 for line in infile:
+                    if ('"api": "android"' in line) or ('"api": "ios"' in line):
+                        if '"messageType": "mtu"' in line:
+                            if ('"id":' in line):
+                                dataObj = json.loads(line)
+                                dupe = False
+                                thisKey = getVals(dataObj)
+                                if dataObj["id"] in mtu_masterSet:
+                                    for eachTransaction in mtu_masterSet[s]:
+                                        origFilename, origLine = isDupe(eachTransaction, thisKey)
+                                        if origLine > 0:
+                                            dupe = True
+                                            break
+                                    if dupe:
+                                        dataObj['dupeFileName'] = origFileName
+                                        dataObj['dupeLineNo'] = origLine
+                                        line = json.dumps(dataObj)                           
+                                    else:
+                                        mtu_masterSet[s].append(thisKey)
+                                else:
+                                    mtu_masterSet[s]=[]
+                                    mtu_masterSet[s].append(thisKey)
                     outfile.write(line)
             outfile.close()
         infile.close()
