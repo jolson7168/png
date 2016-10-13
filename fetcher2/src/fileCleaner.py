@@ -232,6 +232,7 @@ def cleanLine(line, timeStart, fileName, lineNo):
 
         offset = int(line.split(' ')[0])
         retval['serverTime'] = timeStart+offset
+        retval['serverTimeOffset'] = offset
 
         event = line.split(' ')[1]
         retval['messageType'] = event
