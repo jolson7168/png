@@ -23,7 +23,7 @@ class MRCountEvents(MRJob):
         except TypeError as e:
             raise TypeError(e)
         except ValueError as e:
-            msg = 'Problem serializing JSON: {0}'.format(decoded)
+            msg = 'Problem serializing JSON: {0}'.format(data)
             raise ValueError(msg)
 
     def init_get_events(self):
@@ -33,7 +33,11 @@ class MRCountEvents(MRJob):
     def get_events(self, _, line):
 
         self.currentLine = self.currentLine + 1
-        dataObj = self.get_json(line)
+        try:
+            dataObj = self.get_json(line)
+        except Exception as e:
+            pass
+            sys.stderr.write('ERROR: {0} {1} Line: {2} File: {3}{4}'.format(e, line, self.currentLine,jobconf_from_env('mapreduce.map.input.file'),'\n'))
 
         stat = 'None'
         if 'event' in dataObj:
