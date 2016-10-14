@@ -129,7 +129,7 @@ def rezipFile(aFile, logger):
                                     if dupe:
                                         dataObj['dupeFileName'] = origFileName
                                         dataObj['dupeLineNo'] = origLine
-                                        line = json.dumps(dataObj)                           
+                                        line = '{0}{1}'.format(json.dumps(dataObj),'\n')                           
                                     else:
                                         mtu_masterSet[dataObj["id"]].append(thisKey)
                                 else:
