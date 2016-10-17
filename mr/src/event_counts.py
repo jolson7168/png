@@ -54,6 +54,9 @@ class MRCountEvents(MRJob):
             event = 'None'
             if 'event' in dataObj:
                 event = dataObj['event']
+            elif 'messageType' in dataObj:
+                if dataObj['messageType'] == 'pgr':
+                    event = 'pgr'
 
             if 'requestDate' in dataObj:
                 dataDateStamp = datetime.strptime(dataObj['requestDate'], "%Y%m%d")
