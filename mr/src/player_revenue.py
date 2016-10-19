@@ -10,11 +10,20 @@ import urllib
 import os
 import sys
 from datetime import datetime
+from datetime import timedelta
 from ConfigParser import RawConfigParser
 
+EVTTYPE = 1
+MTUTYPE = 2
 class MRCountEvents(MRJob):
 
     OUTPUT_PROTOCOL = CsvProtocol
+
+
+    masterList = {}
+    masterList2 = {}
+    eventList = []
+    apiKeys = {}
 
     def get_json(self, data):
         try:
@@ -28,12 +37,60 @@ class MRCountEvents(MRJob):
 
     def init_get_events(self):
 
-        self.currentLine = 0
+        self.masterList = {}
+        self.currentLine = 1
+
+
+    def getKey(self, msg, msgType):
+        retval = []
+        complete = False
+        if "messageType" in msg:
+            if "api" in msg:
+                if "id" in msg:
+                    if "serverTime" in msg:
+                            retval.append(msg["messageType"])
+                            retval.append(msg["api"])
+                            retval.append(msg["id"])
+                            if 'ts' in msg:
+                                try:
+                                    startedString = datetime.fromtimestamp(int(msg['ts'])/1000).strftime("%Y-%m-%d %H:%M:%S")                    
+                                    retval.append(startedString)
+                                    if msgType == MTUTYPE:
+                                        if "v" in msg:
+                                            retval.append(msg["v"])
+                                            complete = True
+                                    elif msgType == EVTTYPE:
+                                        if "event" in msg:
+                                            if "price" in msg:
+                                                retval.append(msg["price"])
+                                                complete = True
+                                except Exception as e:
+                                    pass
+
+        if complete:
+            return tuple(retval)
+        else:
+            sys.stderr.write('{0}{1}'.format(msg,'\n'))
+            return []
+
+    def getOppositeKey(self, key, inType, outType):
+        retval = []
+        if inType == MTUTYPE:
+            retval.append('evt')
+        else:
+            retval.append('mtu')
+        retval.append(key[1])
+        retval.append(key[2])
+        retval.append(key[3])
+        if inType == MTUTYPE:
+            retval.append(float(key[4]) / 100)
+        elif inType == EVTTYPE:
+            retval.append(str(int(key[4] * 100)))
+        return tuple(retval)
+
 
     def get_events(self, _, line):
 
-        self.currentLine = self.currentLine + 1
-        dataObj = None
         try:
             dataObj = self.get_json(line)
         except Exception as e:
@@ -47,13 +104,15 @@ class MRCountEvents(MRJob):
             elif 'messageType' in dataObj:
                 if dataObj['messageType'] == 'mtu':
                     if 'api' in dataObj:
-                        if dataObj['api'] in ['android','ios']: 
-                            stat = 'mtu'
-
+                        if (dataObj['api'] == 'android') or (dataObj['api'] == 'ios'):
+                            if 'v' in dataObj: 
+                                stat = 'mtu'
+                        elif dataObj['api'] == 'desktop':
+                            if 'gameUnlocking' in dataObj:
+                                stat = 'mtu'
+            row = [] 
             if stat in ['mtu', 'purchase','tmpunlock_with_money_success']:
                 try:
-                    row = [] 
-
                     id1 = ''
                     if 'id' in dataObj:
                         id1 = dataObj['id']
@@ -64,7 +123,7 @@ class MRCountEvents(MRJob):
                         api = dataObj['api']
                     row.append(api)
 
-
+                    row.append(stat)
                     micro = False
                     nowSting = ''
                     if 'serverTime' in dataObj:
@@ -80,9 +139,11 @@ class MRCountEvents(MRJob):
                     
                     #Fix
                     startedString = ''
+                    now = 0 
                     if 'ts' in dataObj:
                         try:
                             started = int(dataObj['ts'])
+                            now = started
                             startedTimeStamp = datetime.fromtimestamp(started/1000)
                             startedString = startedTimeStamp.strftime("%Y-%m-%d %H:%M:%S")                    
                         except ValueError as e:
@@ -321,20 +382,46 @@ class MRCountEvents(MRJob):
                         dupeLineNo = dataObj['dupeLineNo']
                     row.append(dupeLineNo)
 
-
-                    yield None, row
-
                 except KeyError as e:
                     sys.stderr.write('ERROR: Missing expected key: {0} Line: {1} File: {2}{3}'.format(e, self.currentLine,jobconf_from_env('mapreduce.map.input.file'),'\n'))
                     pass
                 except Exception as e:
                     sys.stderr.write('ERROR: {0} Line: {1} File: {2}{3}'.format(e, self.currentLine,jobconf_from_env('mapreduce.map.input.file'),'\n'))
                     pass
-     
+
+                if "messageType" in dataObj:
+                    if dataObj["messageType"] == "mtu":
+                        key = self.getKey(dataObj, MTUTYPE)
+                        sys.stderr.write('key1: {0}{1}'.format(key, '\n'))
+                        if len(key) > 0:
+                            oppositeKey = self.getOppositeKey(key, MTUTYPE, EVTTYPE)
+                            if oppositeKey not in self.masterList:
+                                self.masterList[key] = row
+                    elif dataObj["messageType"] == "evt":
+                        key = self.getKey(dataObj, EVTTYPE)
+                        sys.stderr.write('key2: {0}{1}'.format(key, '\n'))
+                        if len(key) > 0:
+                            oppositeKey = self.getOppositeKey(key, EVTTYPE, MTUTYPE)
+                            if oppositeKey in self.masterList:
+                                del self.masterList[oppositeKey]
+                            self.masterList[key] = row
+
+        self.currentLine = self.currentLine + 1
+                 
+    def final_get_events(self):
+        for key, val in self.masterList.iteritems():
+            yield key, val
+
+
+
+
     def steps(self):
         return [MRStep(
                        mapper_init=self.init_get_events,
-                       mapper=self.get_events)]
+                       mapper=self.get_events,
+                       mapper_final=self.final_get_events,
+                       )]
+
 
 if __name__ == '__main__':
     MRCountEvents.run()
