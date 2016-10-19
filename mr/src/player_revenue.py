@@ -51,6 +51,10 @@ class MRCountEvents(MRJob):
                             retval.append(msg["messageType"])
                             retval.append(msg["api"])
                             retval.append(msg["id"])
+                            if 'dupeFileName' in msg:
+                                retval.append(msg['dupeFileName'])
+                            else:
+                                retval.append('not a dupe')
                             if 'ts' in msg:
                                 try:
                                     startedString = datetime.fromtimestamp(int(msg['ts'])/1000).strftime("%Y-%m-%d %H:%M:%S")                    
@@ -66,7 +70,6 @@ class MRCountEvents(MRJob):
                                                 complete = True
                                 except Exception as e:
                                     pass
-
         if complete:
             return tuple(retval)
         else:
@@ -82,10 +85,11 @@ class MRCountEvents(MRJob):
         retval.append(key[1])
         retval.append(key[2])
         retval.append(key[3])
+        retval.append('not a dupe')
         if inType == MTUTYPE:
-            retval.append(float(key[4]) / 100)
+            retval.append(float(key[5]) / 100)
         elif inType == EVTTYPE:
-            retval.append(str(int(key[4] * 100)))
+            retval.append(str(int(key[5] * 100)))
         return tuple(retval)
 
 
