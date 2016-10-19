@@ -392,14 +392,17 @@ class MRCountEvents(MRJob):
                 if "messageType" in dataObj:
                     if dataObj["messageType"] == "mtu":
                         key = self.getKey(dataObj, MTUTYPE)
-                        sys.stderr.write('key1: {0}{1}'.format(key, '\n'))
                         if len(key) > 0:
-                            oppositeKey = self.getOppositeKey(key, MTUTYPE, EVTTYPE)
-                            if oppositeKey not in self.masterList:
+                            if (dataObj["api"] == 'android') or (dataObj["api"] == 'ios'):
                                 self.masterList[key] = row
+                            else:
+                                #sys.stderr.write('key1: {0}{1}'.format(key, '\n'))
+                                oppositeKey = self.getOppositeKey(key, MTUTYPE, EVTTYPE)
+                                if oppositeKey not in self.masterList:
+                                    self.masterList[key] = row
                     elif dataObj["messageType"] == "evt":
                         key = self.getKey(dataObj, EVTTYPE)
-                        sys.stderr.write('key2: {0}{1}'.format(key, '\n'))
+                        #sys.stderr.write('key2: {0}{1}'.format(key, '\n'))
                         if len(key) > 0:
                             oppositeKey = self.getOppositeKey(key, EVTTYPE, MTUTYPE)
                             if oppositeKey in self.masterList:
