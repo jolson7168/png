@@ -73,7 +73,7 @@ class MRCountEvents(MRJob):
         if complete:
             return tuple(retval)
         else:
-            sys.stderr.write('{0}{1}'.format(msg,'\n'))
+            #sys.stderr.write('{0}{1}'.format(msg,'\n'))
             return []
 
     def getOppositeKey(self, key, inType, outType):
@@ -398,21 +398,21 @@ class MRCountEvents(MRJob):
                         key = self.getKey(dataObj, MTUTYPE)
                         if len(key) > 0:
                             if (dataObj["api"] == 'android') or (dataObj["api"] == 'ios'):
-                                sys.stderr.write('Adding android / ios mtu: {0}{1}'.format(key, '\n'))
+                                #sys.stderr.write('Adding android / ios mtu: {0}{1}'.format(key, '\n'))
                                 self.masterList[key] = row
                             else:
                                 oppositeKey = self.getOppositeKey(key, MTUTYPE, EVTTYPE)
                                 if oppositeKey not in self.masterList:
-                                    sys.stderr.write('Adding desktop mtu not in dict: {0}{1}'.format(key, '\n'))
+                                    #sys.stderr.write('Adding desktop mtu not in dict: {0}{1}'.format(key, '\n'))
                                     self.masterList[key] = row
                     elif dataObj["messageType"] == "evt":
                         key = self.getKey(dataObj, EVTTYPE)
                         if len(key) > 0:
                             oppositeKey = self.getOppositeKey(key, EVTTYPE, MTUTYPE)
                             if oppositeKey in self.masterList:
-                                sys.stderr.write('Deleting mtu key: {0}{1}'.format(oppositeKey, '\n'))
+                                #sys.stderr.write('Deleting mtu key: {0}{1}'.format(oppositeKey, '\n'))
                                 del self.masterList[oppositeKey]
-                            sys.stderr.write('Adding event key: {0}{1}'.format(key, '\n'))
+                            #sys.stderr.write('Adding event key: {0}{1}'.format(key, '\n'))
                             self.masterList[key] = row
 
         self.currentLine = self.currentLine + 1
