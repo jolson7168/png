@@ -84,8 +84,8 @@ class MRCountEvents(MRJob):
             retval.append('mtu')
         retval.append(key[1])
         retval.append(key[2])
-        retval.append(key[3])
         retval.append('not a dupe')
+        retval.append(key[4])
         if inType == MTUTYPE:
             retval.append(float(key[5]) / 100)
         elif inType == EVTTYPE:
@@ -398,19 +398,21 @@ class MRCountEvents(MRJob):
                         key = self.getKey(dataObj, MTUTYPE)
                         if len(key) > 0:
                             if (dataObj["api"] == 'android') or (dataObj["api"] == 'ios'):
+                                sys.stderr.write('Adding android / ios mtu: {0}{1}'.format(key, '\n'))
                                 self.masterList[key] = row
                             else:
-                                #sys.stderr.write('key1: {0}{1}'.format(key, '\n'))
                                 oppositeKey = self.getOppositeKey(key, MTUTYPE, EVTTYPE)
                                 if oppositeKey not in self.masterList:
+                                    sys.stderr.write('Adding desktop mtu not in dict: {0}{1}'.format(key, '\n'))
                                     self.masterList[key] = row
                     elif dataObj["messageType"] == "evt":
                         key = self.getKey(dataObj, EVTTYPE)
-                        #sys.stderr.write('key2: {0}{1}'.format(key, '\n'))
                         if len(key) > 0:
                             oppositeKey = self.getOppositeKey(key, EVTTYPE, MTUTYPE)
                             if oppositeKey in self.masterList:
+                                sys.stderr.write('Deleting mtu key: {0}{1}'.format(oppositeKey, '\n'))
                                 del self.masterList[oppositeKey]
+                            sys.stderr.write('Adding event key: {0}{1}'.format(key, '\n'))
                             self.masterList[key] = row
 
         self.currentLine = self.currentLine + 1
