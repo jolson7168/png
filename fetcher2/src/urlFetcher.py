@@ -144,8 +144,13 @@ def main(argv):
             startOffset = int(cfg.get('fetch','startoffset'))
         else:
             startOffset = -1
+        if cfg.has_option('fetch','endoffset'):
+            endOffset = int(cfg.get('fetch','endoffset'))
+        else:
+            endOffset = -1
+
         startDate =  (args.startDate + timedelta(hours = startOffset)).replace(minute=0, second=0, microsecond=0)
-        endDate = (args.startDate + timedelta(hours = -1)).replace(minute=0, second=0, microsecond=0)
+        endDate = (args.startDate + timedelta(hours = endOffset)).replace(minute=0, second=0, microsecond=0)
 
     apiKeys = {}
     apiKeyMap = cfg.get('fetch','apiKeys').split('|')
@@ -189,6 +194,7 @@ def main(argv):
                     for result in results['fileList']:
                         sendToQueue(urlQueue, result['url'], logger)         
         currentDate = currentDate + timedelta(hours = 1)
+
         
     # Clean up
     logger.info('Done! '+time.strftime("%Y%m%d%H%M%S")+'  ==============================')
